@@ -28,7 +28,7 @@ export default function CaseOverviewPage({
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/(auth)/login");
+      router.push("/login");
       return;
     }
     if (status !== "authenticated") return;

@@ -41,6 +41,7 @@ export const authOptions: NextAuthOptions = {
             name: user.username,
             email: user.email,
             image: user.role,
+            accessToken: access_token,
           };
         } catch {
           return null;
@@ -50,7 +51,7 @@ export const authOptions: NextAuthOptions = {
   ],
   session: { strategy: "jwt" },
   pages: {
-    signIn: "/(auth)/login",
+    signIn: "/login",
   },
   callbacks: {
     async jwt({ token, user }) {

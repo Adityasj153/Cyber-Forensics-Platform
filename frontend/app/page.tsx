@@ -20,7 +20,7 @@ export default function LandingPage() {
             Open Dashboard
           </Link>
           <Link
-            href="/(auth)/login"
+            href="/login"
             className="bg-slate-800 border border-slate-600 text-fog-200 px-6 py-3 rounded-lg font-medium hover:border-trace-cyan/30 transition-colors"
           >
             Sign In
