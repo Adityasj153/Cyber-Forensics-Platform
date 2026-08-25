@@ -1,15 +1,18 @@
+import { getSession } from "next-auth/react";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-function getToken(): string | null {
+async function getToken(): Promise<string | null> {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("token");
+  const session = await getSession();
+  return (session as any)?.accessToken ?? null;
 }
 
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = getToken();
+  const token = await getToken();
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
   };
@@ -171,7 +174,7 @@ export const api = {
       if (deviceId) {
         formData.append("device_id", deviceId);
       }
-      const token = getToken();
+      const token = await getToken();
       const res = await fetch(`${API_BASE}/api/cases/${caseId}/logs`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},

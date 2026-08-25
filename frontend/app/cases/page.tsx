@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { api, Case } from "@/lib/api-client";
 
 export default function CasesPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -15,17 +17,18 @@ export default function CasesPage() {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
+    if (status === "unauthenticated") {
       router.push("/(auth)/login");
       return;
     }
-    api.cases
-      .list()
-      .then(setCases)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [router]);
+    if (status === "authenticated") {
+      api.cases
+        .list()
+        .then(setCases)
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    }
+  }, [status, router]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

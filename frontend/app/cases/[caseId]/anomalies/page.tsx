@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import { api, Anomaly } from "@/lib/api-client";
 import AnomalyPanel from "@/components/anomaly-panel";
 
@@ -9,6 +10,7 @@ export default function AnomaliesPage({
 }: {
   params: { caseId: string };
 }) {
+  const { data: session, status } = useSession();
   const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterSeverity, setFilterSeverity] = useState("");
@@ -16,14 +18,13 @@ export default function AnomaliesPage({
   const [filterStatus, setFilterStatus] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    if (status !== "authenticated") return;
     api.anomalies
       .list(params.caseId)
       .then(setAnomalies)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [params.caseId]);
+  }, [params.caseId, status]);
 
   const handleReview = async (id: string, status: "confirmed" | "dismissed") => {
     try {

@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { api, Entity, CorrelationEdge } from "@/lib/api-client";
 import CorrelationGraph from "@/components/correlation-graph";
 
 export default function CorrelationPage({
   params,
 }: {
-  params: { caseId: string } }) {
+  params: { caseId: string };
+}) {
+  const { data: session, status } = useSession();
   const [entities, setEntities] = useState<Entity[]>([]);
   const [edges, setEdges] = useState<CorrelationEdge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,8 +18,7 @@ export default function CorrelationPage({
   const [view, setView] = useState<"graph" | "list">("graph");
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    if (status !== "authenticated") return;
 
     Promise.all([
       api.entities.list(params.caseId),
@@ -28,7 +30,7 @@ export default function CorrelationPage({
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [params.caseId]);
+  }, [params.caseId, status]);
 
   const filteredEdges = edges.filter((e) => e.confidence >= minConfidence);
 

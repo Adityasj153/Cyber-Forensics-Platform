@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { api, Case, Device, Artifact } from "@/lib/api-client";
 
@@ -11,6 +12,7 @@ export default function CaseOverviewPage({
   params: { caseId: string };
 }) {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
@@ -25,11 +27,11 @@ export default function CaseOverviewPage({
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
+    if (status === "unauthenticated") {
       router.push("/(auth)/login");
       return;
     }
+    if (status !== "authenticated") return;
     Promise.all([
       api.cases.get(params.caseId),
       api.devices.list(params.caseId).catch(() => []),
@@ -42,7 +44,7 @@ export default function CaseOverviewPage({
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [params.caseId, router]);
+  }, [params.caseId, status, router]);
 
   const handleAddDevice = async (e: React.FormEvent) => {
     e.preventDefault();

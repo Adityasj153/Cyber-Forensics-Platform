@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import { api, LogEvent, Device } from "@/lib/api-client";
 import Timeline from "@/components/timeline";
 
@@ -9,6 +10,7 @@ export default function TimelinePage({
 }: {
   params: { caseId: string };
 }) {
+  const { data: session, status } = useSession();
   const [events, setEvents] = useState<LogEvent[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,8 +19,7 @@ export default function TimelinePage({
   const [filterAction, setFilterAction] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    if (status !== "authenticated") return;
 
     Promise.all([
       api.search.query(params.caseId, { size: 500 }),
@@ -30,7 +31,7 @@ export default function TimelinePage({
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [params.caseId]);
+  }, [params.caseId, status]);
 
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
