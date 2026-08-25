@@ -1,0 +1,16 @@
+8/20/2026 9:14:00 AM | INFO | 4688 | Security | File "Q3_financials.xlsx" copied to USB device SanDisk Ultra
+8/20/2026 9:14:05 AM | INFO | 4688 | Security | USB device SanDisk Ultra connected - file transfer initiated
+8/20/2026 9:14:12 AM | INFO | 4688 | Security | File "Q3_financials.xlsx" written to USB device successfully
+8/20/2026 9:15:30 AM | INFO | 1204 | WinINet | Network connection established to 10.0.0.1:443
+8/20/2026 9:16:00 AM | WARNING | 4688 | Security | Unusual file access pattern detected - multiple sensitive files accessed
+8/20/2026 9:17:22 AM | INFO | 4688 | Security | File "Q3_financials.xlsx" accessed - last modified by user suspect@example.com
+8/20/2026 9:20:00 AM | INFO | 512 | TaskScheduler | Scheduled task "DataSync" triggered
+8/20/2026 9:22:00 AM | WARNING | 4688 | Bluetooth | Bluetooth file transfer initiated to paired device
+8/20/2026 9:22:15 AM | INFO | 4688 | Bluetooth | Bluetooth file transfer completed - Q3_financials.xlsx sent
+8/20/2026 9:25:00 AM | INFO | 1204 | WinINet | DNS query resolved: smtp.office365.com -> 40.97.164.82
+8/20/2026 9:25:30 AM | INFO | 1204 | WinINet | HTTPS connection to 40.97.164.82:443 established
+8/20/2026 9:30:00 AM | INFO | 4688 | Email | Outbound email sent to external recipient - subject: "RE: Financial Report"
+8/20/2026 9:30:05 AM | INFO | 4688 | Email | Email attachment Q3_financials.xlsx uploaded (245760 bytes)
+8/20/2026 9:35:00 AM | INFO | 512 | TaskScheduler | Scheduled task "BackupService" completed
+8/20/2026 9:40:00 AM | ERROR | 4688 | Security | File access denied: classified_documents.pdf - insufficient privileges
+8/20/2026 9:45:00 AM | INFO | 1204 | WinINet | Network connection to 203.0.113.42:443 closed

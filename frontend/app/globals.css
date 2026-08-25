@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&family=JetBrains+Mono:wght@400&display=swap');
+
+:root {
+  --ink-950: #0E1420;
+  --slate-800: #1A2233;
+  --slate-600: #33415A;
+  --fog-200: #C9D2E0;
+  --evidence-amber: #D98E33;
+  --trace-cyan: #4FB8C4;
+  --critical: #C9483F;
+  --verified: #5FA777;
+}
+
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background-color: var(--ink-950);
+  color: var(--fog-200);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.font-display {
+  font-family: 'IBM Plex Sans Condensed', sans-serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}

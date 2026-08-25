@@ -1,0 +1,65 @@
+{
+  "scenario": "ransomware_incident",
+  "description": "Windows machine compromised, files encrypted by ransomware payload",
+  "devices": [
+    {
+      "id": "PC-09321",
+      "type": "pc",
+      "os": "Windows 10",
+      "owner": "victim@example.com"
+    }
+  ],
+  "timeline_events": [
+    {
+      "timestamp": "2026-08-21T14:05:00Z",
+      "device": "PC-09321",
+      "source": "windows_evtx",
+      "action": "download_complete",
+      "object": "invoice_2026.exe",
+      "detail": "Suspicious executable downloaded from phishing email attachment",
+      "hash": "ff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+    },
+    {
+      "timestamp": "2026-08-21T14:07:00Z",
+      "device": "PC-09321",
+      "source": "windows_evtx",
+      "action": "process_start",
+      "object": "invoice_2026.exe",
+      "detail": "Suspicious executable launched by user",
+      "hash": "ff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+    },
+    {
+      "timestamp": "2026-08-21T14:08:00Z",
+      "device": "PC-09321",
+      "source": "windows_evtx",
+      "action": "file_modification",
+      "object": "C:\\Users\\victim\\Documents\\report.docx",
+      "detail": "File encrypted by ransomware — extension changed to .locked"
+    },
+    {
+      "timestamp": "2026-08-21T14:08:30Z",
+      "device": "PC-09321",
+      "source": "windows_evtx",
+      "action": "file_modification",
+      "object": "C:\\Users\\victim\\Documents\\budget.xlsx",
+      "detail": "File encrypted by ransomware — extension changed to .locked"
+    },
+    {
+      "timestamp": "2026-08-21T14:09:00Z",
+      "device": "PC-09321",
+      "source": "windows_evtx",
+      "action": "ransom_note_created",
+      "object": "C:\\Users\\victim\\Desktop\\README_DECRYPT.txt",
+      "detail": "Ransom note dropped on desktop"
+    },
+    {
+      "timestamp": "2026-08-21T14:10:00Z",
+      "device": "PC-09321",
+      "source": "windows_evtx",
+      "action": "network_connection",
+      "object": "198.51.100.23:443",
+      "detail": "Outbound HTTPS connection to suspected C2 server",
+      "ip_address": "198.51.100.23"
+    }
+  ]
+}

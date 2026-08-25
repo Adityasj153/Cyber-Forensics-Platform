@@ -1,0 +1,57 @@
+{
+  "scenario": "insider_data_exfiltration",
+  "description": "Suspect transfers confidential files from org-owned Windows PC to personal Android phone via USB, Bluetooth, and email",
+  "devices": [
+    {
+      "id": "PC-04771",
+      "type": "pc",
+      "os": "Windows 11",
+      "owner": "suspect@example.com"
+    },
+    {
+      "id": "MOBILE-2291",
+      "type": "mobile",
+      "os": "Android 14",
+      "owner": "suspect@example.com"
+    }
+  ],
+  "timeline_events": [
+    {
+      "timestamp": "2026-08-20T09:14:00Z",
+      "device": "PC-04771",
+      "source": "windows_evtx",
+      "action": "file_copy",
+      "object": "Q3_financials.xlsx",
+      "detail": "File copied to USB device",
+      "hash": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678"
+    },
+    {
+      "timestamp": "2026-08-20T09:17:00Z",
+      "device": "MOBILE-2291",
+      "source": "android_logcat",
+      "action": "file_received",
+      "object": "Q3_financials.xlsx",
+      "detail": "File received via USB MTP",
+      "hash": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678"
+    },
+    {
+      "timestamp": "2026-08-20T09:22:00Z",
+      "device": "MOBILE-2291",
+      "source": "android_logcat",
+      "action": "bluetooth_transfer",
+      "object": "Q3_financials.xlsx",
+      "detail": "File sent via Bluetooth to unknown device",
+      "hash": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678"
+    },
+    {
+      "timestamp": "2026-08-20T09:30:00Z",
+      "device": "MOBILE-2291",
+      "source": "android_logcat",
+      "action": "email_sent",
+      "object": "Q3_financials.xlsx",
+      "detail": "File attached to email sent to external IP 203.0.113.42",
+      "hash": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678",
+      "ip_address": "203.0.113.42"
+    }
+  ]
+}

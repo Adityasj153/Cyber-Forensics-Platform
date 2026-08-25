@@ -1,0 +1,18 @@
+08-20 09:17:00.123  1234  1234 I StorageManager: MTP device connected - SanDisk Ultra
+08-20 09:17:05.456  1234  1234 I StorageManager: File received via MTP: Q3_financials.xlsx (245760 bytes)
+08-20 09:17:10.789  1234  1234 I MediaScanner: Scanning new file: /sdcard/Download/Q3_financials.xlsx
+08-20 09:17:15.012  1234  1234 D FileChecksum: SHA-256: a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678
+08-20 09:20:00.345  2345  2345 I BluetoothAdapter: Bluetooth enabled
+08-20 09:21:00.678  2345  2345 I BluetoothDevice: Paired device found: DESKTOP-PC-04771
+08-20 09:22:00.901  2345  2345 I BluetoothOpp: File transfer initiated via OPP
+08-20 09:22:05.234  2345  2345 I BluetoothOpp: Sending file: Q3_financials.xlsx to DESKTOP-PC-04771
+08-20 09:22:10.567  2345  2345 I BluetoothOpp: Transfer complete - 245760 bytes sent
+08-20 09:25:00.890  3456  3456 I ConnectivityService: Network connected: WiFi (WPA2)
+08-20 09:28:00.123  3456  3456 I EmailApp: Composing new email
+08-20 09:29:00.456  3456  3456 I EmailApp: Attaching file: Q3_financials.xlsx (245760 bytes)
+08-20 09:29:30.789  3456  3456 I EmailApp: Connecting to SMTP server: smtp.office365.com:587
+08-20 09:30:00.012  3456  3456 I EmailApp: Email sent to external-recipient@foreign-domain.com
+08-20 09:30:05.345  3456  3456 I EmailApp: Email delivered successfully - Message-ID: <abc123@mail>
+08-20 09:35:00.678  1234  1234 W Filesystem: Low storage warning: 2.3GB remaining
+08-20 09:40:00.901  2345  2345 I BluetoothAdapter: Bluetooth disabled
+08-20 09:45:00.234  3456  3456 I ConnectivityService: Network disconnected: WiFi
