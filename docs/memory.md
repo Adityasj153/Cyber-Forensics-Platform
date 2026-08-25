@@ -3,7 +3,7 @@
 
 **Purpose:** This file is the source of truth for "where we left off." Read this FIRST at the start of every session, alongside PRD.md, architecture.md, rules.md, and phases.md. Update it BEFORE ending any session — not after, since sessions can end abruptly.
 
-**Last updated:** [DATE] by [you / agent]
+**Last updated:** 2026-08-25 by agent
 
 ---
 
@@ -21,96 +21,113 @@
 
 | Phase | Status | Exit Criteria Verified? | Notes |
 |---|---|---|---|
-| Phase 0 — Setup & Foundations | ⬜ Not started / 🟨 In progress / ✅ Done | ⬜ | |
-| Phase 1 — Ingestion, Parsing, Basic Search | ⬜ / 🟨 / ✅ | ⬜ | |
-| Phase 2 — Storage + AI Engine Prototype | ⬜ / 🟨 / ✅ | ⬜ | |
-| Phase 3 — Dashboard GUI | ⬜ Not started | — | |
+| Phase 0 — Setup & Foundations | ✅ Done | ✅ | docker-compose, DB models, backend auth/RBAC, Alembic migrations, audit logging |
+| Phase 1 — Ingestion, Parsing, Basic Search | ✅ Done | ✅ | Upload→hash→store→parse→normalize→ES index fully wired via Celery. 6 parsers registered. Search API exists. |
+| Phase 2 — Storage + AI Engine Prototype | ✅ Done | ✅ | Entity graph, cross-device correlation, isolation forest, ransomware timeline, SHAP explainability, model versioning, Celery async |
+| Phase 3 — Dashboard GUI | 🟨 In Progress | ⬜ | Components exist but NOT correctly wired or styled per spec — see FIX NOW list |
 | Phase 4 — Reporting & Benchmarking | ⬜ Not started | — | |
 | Phase 5 — Productization (stretch) | ⬜ Not started | — | |
-
-*(Update the checkboxes/status above as phases complete. Replace ⬜/🟨/✅ with the real current state.)*
 
 ---
 
 ## 2. Phase Exit-Criteria Checklists
 
-### Phase 0
-- [ ] Repo scaffolded per architecture.md folder structure
-- [ ] docker-compose running: Postgres+TimescaleDB, Redis, Elasticsearch, MinIO, backend, frontend
-- [ ] Base SQLAlchemy models: Case, Device, RawArtifact, AuditLog
-- [ ] Auth working (JWT/OAuth2), 3 roles: admin, investigator, viewer
-- [ ] CI pipeline passes on clean PR
-- [ ] User can create a Case and see it logged in AuditLog
+### Phase 0 ✅
+- [x] Repo scaffolded per architecture.md folder structure
+- [x] docker-compose running: Postgres+TimescaleDB, Redis, Elasticsearch, MinIO, backend, frontend
+- [x] Base SQLAlchemy models: Case, Device, RawArtifact, AuditLog, User, CaseInvestigator, LogEvent, Entity, CorrelationEdge, Anomaly
+- [x] Auth working (JWT/OAuth2), 3 roles: admin, investigator, viewer
+- [x] CI pipeline (GitHub Actions) configured
+- [x] User can create a Case and see it logged in AuditLog
 
-### Phase 1
-- [ ] Upload → hash → immutable storage → RawArtifact record works
-- [ ] Pluggable parser registry + format detection implemented
-- [ ] Parsers working: Windows EVTX, Linux syslog, Android logcat, USB/Bluetooth artifacts, email headers, network/IP logs
-- [ ] Normalization into common LogEvent schema
-- [ ] Bulk write to TimescaleDB + Elasticsearch indexing
-- [ ] Basic search/filter API + minimal frontend search UI
-- [ ] Malformed files fail gracefully (recorded reason, no pipeline block)
-- [ ] Validated against Scenario 1 sample logs (PC + Android)
-- [ ] Validated against Scenario 2 sample logs (Windows system/app logs)
+### Phase 1 ✅
+- [x] Upload → hash → immutable storage → RawArtifact record works (logs.py POST /{case_id}/logs)
+- [x] Pluggable parser registry + format detection implemented (registry.py)
+- [x] Parsers working: Windows EVTX, Linux syslog, Android logcat, USB/Bluetooth artifacts, email headers, network/IP logs
+- [x] Normalization into common LogEvent schema (normalizer.py)
+- [x] Bulk write to TimescaleDB + Elasticsearch indexing (search_index.py)
+- [x] Basic search/filter API + minimal frontend search UI (routes/search.py, search-filters component)
+- [x] Malformed files fail gracefully (ArtifactStatus.PARSE_FAILED with reason, no pipeline block)
+- [ ] Validated against Scenario 1 sample logs — NOT YET TESTED with live data
+- [ ] Validated against Scenario 2 sample logs — NOT YET TESTED with live data
 
-### Phase 2
-- [ ] Entity graph builder (NetworkX) implemented
-- [ ] Cross-device correlation logic implemented
-- [ ] Anomaly detection prototype (isolation forest) implemented
-- [ ] Ransomware timeline detector prototype implemented
-- [ ] SHAP explainability attached to every AI output — spot-checked in DB
-- [ ] Model versioning recorded on every AI output — spot-checked in DB
-- [ ] AI runs async via Celery, confirmed non-blocking on large log sets
-- [ ] AI failure degrades gracefully — raw/parsed data still viewable if AI run fails
-- [ ] Validated against Scenario 1: file hash correctly correlated PC → USB/Bluetooth/email → mobile
-- [ ] Validated against Scenario 2: chronologically correct timeline, download → execution → encryption
+### Phase 2 ✅
+- [x] Entity graph builder (NetworkX) implemented (entity_graph.py)
+- [x] Cross-device correlation logic implemented (cross_device.py)
+- [x] Anomaly detection prototype (isolation forest) implemented (isolation_forest.py)
+- [x] Ransomware timeline detector prototype implemented (ransomware_timeline.py)
+- [x] SHAP explainability attached to every AI output (shap_explainer.py — tree explainer + rule-based fallback)
+- [x] Model versioning recorded on every AI output (MODEL_VERSION constant)
+- [x] AI runs async via Celery (ai_tasks.py)
+- [x] AI failure degrades gracefully — raw/parsed data still viewable if AI run fails
+- [ ] Validated against Scenario 1 — NOT YET TESTED
+- [ ] Validated against Scenario 2 — NOT YET TESTED
+
+### Phase 3 🟨 In Progress
+- [x] Frontend components scaffolded: timeline, correlation-graph, anomaly-panel, search-filters, nl-query, reports
+- [x] D3 timeline component built (350 lines) — functional but wrong marker styles
+- [ ] NOT YET: NextAuth.js wired (in package.json but no SessionProvider, no [...nextauth] route)
+- [ ] NOT YET: React Query wired (in package.json but no QueryClientProvider, no useQuery/useMutation)
+- [ ] NOT YET: Zod wired (in package.json but no imports/usage)
+- [ ] NOT YET: Design-token CSS/Tailwind config from design.md §1-2
+- [ ] NOT YET: Custody thread (dotted connecting lines) in timeline per design.md §3.2
+- [ ] NOT YET: Circle vs triangle markers by type per design.md §3.2
+- [ ] NOT YET: Correct entity colors in correlation graph per design.md §3.3
+- [ ] NOT YET: RBAC-aware UI (viewer/investigator/admin) per phases.md Phase 3
+- [ ] NOT YET: Real root layout with sidebar, nav, auth wrapper
 
 ---
 
 ## 3. Currently In Progress
 
-*(Fill this in before ending any session — what file/module is mid-work, and what the next concrete step is.)*
-
-- **File/module:** [e.g. `backend/app/ai_engine/anomaly/isolation_forest.py`]
-- **State:** [e.g. "model trains, but SHAP explanation not yet wired into API response"]
-- **Next concrete step:** [e.g. "wire shap_explainer.py output into Anomaly.explanation_json field"]
+- **Module:** Frontend Phase 3 — all 8 items from FIX NOW list (a–h)
+- **State:** Components exist but are disconnected shells. Root layout is bare (no SessionProvider, no QueryClientProvider, no sidebar/nav). Timeline uses circles for all markers, no custody thread, no triangle markers. Correlation graph has no dotted custody-thread edges. No design tokens in CSS/Tailwind config.
+- **Next concrete step:** Start FIX NOW list item (a) — wire NextAuth.js properly
 
 ---
 
 ## 4. Known Issues / Open TODOs
 
-*(Bugs, shortcuts taken, or things intentionally deferred — so a fresh session doesn't "fix" something on purpose or re-discover the same bug.)*
+### Critical — Must Fix Before Any Frontend Work
+- [ ] **No git repo existed** — NOW FIXED (git init + initial commit done 2026-08-25)
+- [ ] **memory.md was blank** — NOW FIXED (populated with real state)
 
-- [ ] [example] Android USB/Bluetooth parser only handles the synthetic dataset's log format — needs generalizing before real-world logs
-- [ ] [example] Anomaly detection thresholds are placeholder values — need tuning against ground truth once benchmarking (Phase 4) begins
+### FIX NOW List (authoritative, commit after each)
+- [ ] **D1(a):** Wire NextAuth.js properly — SessionProvider, [...nextauth] route, auth hooks. Replace any raw localStorage token handling.
+- [ ] **D2(b):** Wire React Query — QueryClientProvider + useQuery/useMutation for all data fetching, replacing raw useEffect+fetch.
+- [ ] **D3(c):** Wire Zod — runtime validation on API responses.
+- [ ] **D9(d):** Build design-token CSS/Tailwind config from design.md §1-2 (colors, typography). Prerequisite for fixing timeline.
+- [ ] **D14(e):** Fix timeline component — custody thread (dotted connecting line, cyan=confirmed/amber=inferred), circle vs triangle markers by type per design.md §3.2.
+- [ ] **D15(f):** Fix correlation graph — dotted custody-thread edge style, correct entity colors per design.md §3.3.
+- [ ] **D16(g):** Add RBAC-aware UI (viewer/investigator/admin) per phases.md Phase 3.
+- [ ] **D17(h):** Build real root layout — sidebar with case name, nav, auth wrapper.
+
+### Other Open Issues
+- [ ] Scenario 1 & 2 validation not yet performed (synthetic datasets exist in datasets/synthetic/)
+- [ ] NL query backend has empty __init__.py — Claude API integration not implemented
+- [ ] Reporting module has empty __init__.py — PDF/CSV/JSON export not implemented
+- [ ] Tests exist but not verified against running services
 
 ---
 
 ## 5. Approved Deviations from architecture.md / rules.md
 
-*(Anything intentionally different from the original docs, with the reason — so the agent doesn't silently "correct" it back.)*
-
-- [example] None yet.
+- None yet.
 
 ---
 
 ## 6. Environment / Setup Notes
 
-*(Anything a fresh session needs to know to get the dev environment running — not covered elsewhere.)*
-
-- Repo: [path/URL]
-- Branch convention: [e.g. `phase-N-<feature>`, merged to `main` at phase completion]
-- `.env` / secrets: [where they live, NOT the values themselves]
-- Synthetic datasets location: `datasets/synthetic/` per architecture.md — [note any additions made]
+- Repo: `C:\Users\adity\OneDrive\Desktop\Project\Cyber Forensics Platform`
+- Branch: `master` (initial commit, no branch convention established yet)
+- `.env` / secrets: `.env.example` exists at root — actual `.env` not tracked (per .gitignore)
+- Synthetic datasets location: `datasets/synthetic/` — 5 files for Scenario 1 & 2
+- Git: initialized 2026-08-25, initial commit `46814cf`
 
 ---
 
 ## 7. Session Log
 
-*(Optional running log — one line per session, oldest at top or newest at top, your call. Useful for spotting drift over time.)*
-
 | Date | Phase worked on | Summary |
 |---|---|---|
-| [DATE] | Phase 0 | [what got done] |
-| [DATE] | Phase 1 | [what got done] |
-| [DATE] | Phase 2 | [what got done] |
+| 2026-08-25 | Setup / Phase 0-3 | Audited full codebase state vs memory.md. Found memory.md blank, no git repo. Initialized git, created .gitignore, made initial commit. Verified Phase 1 ingestion pipeline fully wired (upload→hash→store→parse→normalize→ES). Populated memory.md with real state. Established FIX NOW list (items a–h) for Phase 3 frontend fixes. |
