@@ -3,7 +3,7 @@
 
 **Purpose:** This file is the source of truth for "where we left off." Read this FIRST at the start of every session, alongside PRD.md, architecture.md, rules.md, and phases.md. Update it BEFORE ending any session — not after, since sessions can end abruptly.
 
-**Last updated:** 2026-08-26 (session 4, continued) by agent
+**Last updated:** 2026-08-26 (session 5) by agent
 
 ---
 
@@ -24,7 +24,7 @@
 | Phase 0 — Setup & Foundations | 🟨 Nearly done | 🟨 | Runtime-verified 2026-08-26: stack boots, migrations apply, auth works, case-create writes AuditLog. CI workflow `.github/workflows/ci.yml` EXISTS (3 jobs: backend-lint, backend-test, frontend-lint) but has NEVER RUN — triggers on `main` branch while repo is `master`; no remote configured. Branch name must be fixed before CI can execute. |
 | Phase 1 — Ingestion, Parsing, Basic Search | 🟨 Code-complete | ⬜ | Pipeline fully wired (upload→hash→store→parse→normalize→ES via Celery), 6 parsers registered, search API + UI exist — but **never exercised end-to-end with real log files** |
 | Phase 2 — Storage + AI Engine Prototype | 🟨 Code-complete | ⬜ | All AI components implemented and import cleanly; **never run against actual ingested data** |
-| Phase 3 — Dashboard GUI | 🟨 In Progress | ⬜ | NextAuth ✅ runtime-verified; React Query ✅ all pages migrated (049ab75); TS clean. Remaining: Zod, design tokens, timeline/correlation fixes, RBAC UI, root layout |
+| Phase 3 — Dashboard GUI | 🟨 In Progress | ⬜ | NextAuth ✅ runtime-verified; React Query ✅ all pages migrated (049ab75); TS clean. Zod ✅ (7ab8861). Design tokens ✅ (a82a8a1). Timeline ✅ (067b7c6). Correlation graph ✅ with caveats (6e5a562) — two color deviations from design.md identified: device uses #64748B instead of slate-600 #33415A per §1.1; hash uses invented #9B7ED8 purple not in §3.3 spec (hash not one of spec's 4 types). Remaining: fix D15(f) color deviations, RBAC UI, root layout |
 | Phase 4 — Reporting & Benchmarking | ⬜ Not started | — | |
 | Phase 5 — Productization (stretch) | ⬜ Not started | — | |
 
@@ -76,7 +76,7 @@
 - [x] Design-token CSS/Tailwind config — DONE (§1.1/§1.2/§1.3 colors, §2.1 fonts, §2.2 type scale)
 - [x] Custody thread (dotted connecting lines) in timeline per design.md §3.2 — DONE (067b7c6)
 - [x] Circle vs triangle markers by type per design.md §3.2 — DONE (067b7c6): circle=confirmed, triangle=anomaly
-- [x] Correlation graph entity colors + custody-thread edges per design.md §3.3 — DONE (6e5a562): correct node fills (device=#64748B, file=#C9D2E0, ip=#4FB8C4, hash=#9B7ED8), user amber-outline, dotted edges cyan/amber by confidence. Puppeteer-verified.
+- [x] Correlation graph entity colors + custody-thread edges per design.md §3.3 — DONE (6e5a562) **with two color deviations (not yet fixed):** (1) device uses `#64748B` but §1.1 defines `--slate-600` = `#33415A`; (2) hash uses invented `#9B7ED8` purple — hash is not one of §3.3's 4 spec types (device/file/ip/user), color not in any design.md palette. User amber-outline, dotted edges cyan/amber by confidence. Puppeteer-verified shapes+edge styles correct; hex values need correction.
 - [ ] NOT YET: RBAC-aware UI (viewer/investigator/admin) per phases.md Phase 3
 - [ ] NOT YET: Real root layout with sidebar, nav, auth wrapper
 
@@ -84,9 +84,9 @@
 
 ## 3. Currently In Progress
 
-- **Module:** Phase 3 — FIX NOW item **D16(g): RBAC-aware UI** (next up)
-- **State:** D1(a) NextAuth runtime-verified. D2(b) React Query migration complete (049ab75). D3(c) Zod DONE (7ab8861). D9(d) Design tokens DONE (a82a8a1). D14(e) Timeline DONE (067b7c6). D15(f) Correlation graph DONE (6e5a562): correct entity colors, custody-thread dotted edges, user amber-outline, enhanced legend — puppeteer-verified. TS clean. `__mock__` route removed from timeline page (was used for visual verification, not needed in production).
-- **Next concrete step:** D16(g) Add RBAC-aware UI (viewer/investigator/admin) per phases.md Phase 3.
+- **Module:** Phase 3 — FIX NOW item **D15(f) follow-up: correlation graph color corrections** (next up)
+- **State:** D1(a) NextAuth runtime-verified. D2(b) React Query migration complete (049ab75). D3(c) Zod DONE (7ab8861). D9(d) Design tokens DONE (a82a8a1). D14(e) Timeline DONE (067b7c6). D15(f) Correlation graph DONE with caveats (6e5a562): custody-thread dotted edges, user amber-outline, enhanced legend — puppeteer-verified. BUT two color deviations from design.md identified and NOT YET FIXED: (1) device `#64748B` should be `#33415A` per §1.1 slate-600, (2) hash `#9B7ED8` is invented purple not in spec (hash not one of §3.3's 4 types). TS clean. `__mock__` route removed from timeline page.
+- **Next concrete step:** Fix D15(f) color deviations: change device to `#33415A`, change hash to neutral fallback `#6B8AAE` (existing code fallback, not a new invented color). Then re-puppeteer to confirm corrected hex values render. Commit as `fix(D15f):` follow-up. Then proceed to D16(g) RBAC.
 
 ---
 
@@ -102,7 +102,7 @@
 - [x] **D3(c):** Wire Zod — DONE (`7ab8861`): 9 Zod schemas (Case, Device, Artifact, LogEvent, Anomaly, CorrelationEdge, Entity, SearchResponse, User) in lib/api-client.ts. All API methods pass schema to request<T> which parses on every response. Types inferred from schemas (no duplicate interfaces). tsc clean. **Note:** commit message says `feat(a)` — typo, should be `feat(D3c)`. Cannot rewrite; this note prevents confusion when scanning git log.
 - [x] **D9(d):** Build design-token CSS/Tailwind config — DONE (`a82a8a1`): all §1.1/§1.2/§1.3 colors, §2.1 fonts, §2.2 type scale in tailwind.config.js + globals.css. **Note:** commit message says `feat(a)` — same typo pattern as 7ab8861.
 - [x] **D14(e):** Fix timeline component — DONE (067b7c6): custody thread (dotted lines between consecutive events per device row, cyan=confirmed, amber=AI-inferred), circle markers for confirmed, triangle markers for anomalies. Mock data route (`/__mock__` caseId) for visual verification. Puppeteer-verified: 6/6 markers (3 circles + 3 triangles), 3/3 custody threads (1 cyan + 2 amber), 3 device labels, legend present.
-- [x] **D15(f):** Fix correlation graph — DONE (6e5a562): correct entity colors per §3.3 (device=#64748B, file=#C9D2E0, ip=#4FB8C4, hash=#9B7ED8), user amber-outline (stroke=#D98E33, fill=none), all edges dotted custody-thread style (4,3 dasharray, cyan ≥70% / amber <70%), enhanced legend with edge swatches. Puppeteer-verified: 6/6 nodes correct shape+color, 5/5 dotted edges correct color split, 5 arrow markers, legend present. `__mock__` route removed from timeline page after verification.
+- [x] **D15(f):** Fix correlation graph — DONE with caveats (6e5a562): custody-thread dotted edges (4,3 dasharray, cyan ≥70% / amber <70%), user amber-outline (stroke=#D98E33, fill=none), enhanced legend with edge swatches. Puppeteer-verified: 6/6 nodes correct shape+type labels, 5/5 dotted edges correct color split, 5 arrow markers, legend present. `__mock__` route removed from timeline page after verification. **Caveat: two color deviations from design.md NOT YET FIXED** — (1) device `#64748B` should be `#33415A` per §1.1 slate-600, (2) hash `#9B7ED8` is invented purple not in spec. See §4 "Other Open Issues" for fix plan.
 - [ ] **D16(g):** Add RBAC-aware UI (viewer/investigator/admin) per phases.md Phase 3.
 - [ ] **D17(h):** Build real root layout — sidebar with case name, nav, auth wrapper.
 
@@ -115,6 +115,7 @@
 - [ ] Dev DB has a working seeded-by-hand user for manual testing: **username `testuser`, password `TestPass123!`, role investigator, email test@example.com** (created via POST /api/auth/register). NextAuth login flow verified against this account 2026-08-26.
 
 ### Other Open Issues
+- [ ] **D15(f) correlation graph color deviations (2):** (1) Device node uses `#64748B` (slate-500) but design.md §1.1 `--slate-600` = `#33415A`; (2) Hash node uses `#9B7ED8` (invented purple) — hash is not one of §3.3's 4 spec types (device/file/ip/user), no color defined in design.md. Fix plan: device → `#33415A`, hash → remove from ENTITY_COLORS map and let fallback `#6B8AAE` apply. Re-puppeteer to confirm. **Must fix before D16(g).**
 - [ ] **CI workflow exists but has never run** — `.github/workflows/ci.yml` present (3 jobs), but triggers on `main` while repo branch is `master`; no remote. Must rename branch or fix triggers + push before CI executes. Config verified on disk; execution status unknown.
 - [ ] `next build` (production build) NOT yet run — tsc is clean so it should pass, but unverified. Run before relying on it.
 - [x] node_modules NOT installed in frontend — FIXED 2026-08-26 (`npm install` done; package-lock.json committed). Typecheck/lint now possible locally
@@ -131,6 +132,7 @@
 ## 5. Approved Deviations from architecture.md / rules.md
 
 - **Dev frontend runs on host (`npm run dev`, :3000), not via compose `frontend` service.** Reason: hot-reload iteration speed; avoids rebuilding the Docker image on every change. The compose service remains available for prod-like verification later. Consequence: port 3000 must stay free when starting the full compose stack.
+- **Hash entity type in correlation graph is not in design.md §3.3.** The spec defines 4 entity types (device, file, ip, user). Hash is an implementation addition from the backend data model (Entity entity_type includes "hash"). No spec color exists for it. Current code uses `#9B7ED8` (invented) — flagged for correction to neutral fallback `#6B8AAE` (existing code fallback) rather than inventing a new palette entry.
 - No other deviations. Entity model attribute renamed to `entity_metadata` (DB column still `metadata`) and enum `values_callable` additions preserve the architecture-defined schema exactly — implementation fixes, not deviations.
 
 ---
@@ -141,7 +143,7 @@
 - Branch: `master`
 - `.env` / secrets: `.env.example` exists at root — actual `.env` not tracked (per .gitignore); frontend `.env.local` (untracked) contains NEXT_PUBLIC_API_URL, NEXTAUTH_URL, NEXTAUTH_SECRET (dev-only value)
 - Synthetic datasets location: `datasets/synthetic/` — 5 files for Scenario 1 & 2
-- Git: initialized 2026-08-25; session-3 commits: `e4a8052` (backend runtime fixes), `5ccdee3` (TS fixes), `049ab75` (React Query migration); session-4 commits: `bc7d3d9` (memory sync), `7ab8861` (Zod wiring), `a82a8a1` (design tokens), `067b7c6` (timeline fix), `6e5a562` (correlation graph fix)
+- Git: initialized 2026-08-25; session-3 commits: `e4a8052` (backend runtime fixes), `5ccdee3` (TS fixes), `049ab75` (React Query migration); session-4 commits: `bc7d3d9` (memory sync), `7ab8861` (Zod wiring), `a82a8a1` (design tokens), `067b7c6` (timeline fix), `6e5a562` (correlation graph fix), `0e259f5` (__mock__ removal), `2dbd73b` (memory.md update). Session-5: no code commits (color deviations identified, not yet fixed; memory.md updated).
 - Branch convention: still `master`, no feature branches used yet
 - frontend node_modules installed as of 2026-08-26 — typecheck via `npx tsc --noEmit`
 - Full docker stack boots and works end-to-end (postgres/redis/es/minio/backend); run migrations with `docker compose exec -e PYTHONPATH=/app backend alembic upgrade head`
@@ -157,4 +159,5 @@
 | 2026-08-25 (session 2) | Phase 3 | Resume/cleanup session. memory.md was stale: item (a) NextAuth had been completed & committed (98b7e94, ef9c4a2) but never logged — flagged mismatch, verified artifacts on disk ([...nextauth] route, lib/auth.ts), marked done-with-caveat (not runtime-verified; node_modules absent). Committed half-finished D2(b) React Query provider (8b0b00c) — pages still raw useEffect+fetch. Synced all sections; next step = migrate pages to useQuery/useMutation per §3. No new features built this session. |
 | 2026-08-26 (session 3) | Phase 0-3 verification + fixes | First-ever live run of the whole stack. npm install done; found+fixed 5 backend root causes (bcrypt pin, g++ in Dockerfile, reserved metadata attr, wrong registry import, postgresql.ENUM create_type + env.py DATABASE_URL_SYNC) → commit e4a8052. LESSON: Phases 0-2 were "done" but never run. NextAuth runtime-verified with real login (testuser). Fixed 8 TS errors incl. sa.Enum/tsconfig findings → 5ccdee3. D2(b) complete: all 6 data pages migrated to React Query, smoke-tested authenticated → 049ab75. Pinned NEXTAUTH_SECRET in .env.local to stop recompile-induced auth flakiness. Wrap-up verification pass: audit logging CONFIRMED at runtime (user_registered/user_login/case_created rows); discovered CI workflow never existed → Phase 0 item unchecked, Phase 0/1/2 status downgraded to honest 🟨 code-complete/verified states. Next: D3(c) Zod, then CI workflow + Scenario validation to close Phases 0-2 honestly. |
 | 2026-08-26 (session 4) | Phase 0-3 corrections + Zod + tokens + timeline | Cross-checked memory.md vs repo: found 2 stale claims (CI exists but never ran; design tokens partial). Updated memory.md (commit bc7d3d9). Wired Zod in api-client.ts: 9 schemas, all API methods parse responses, types inferred → commit 7ab8861. Zod live-tested 9/9 endpoints against running backend. D9(d) design tokens complete: added disabled color, light-mode tokens (§1.3), type scale (§2.2) → commit a82a8a1. D14(e) timeline fix: custody thread dotted lines (cyan=confirmed/amber=inferred), circle vs triangle markers, mock data route, puppeteer-verified 6/6 markers + 3/3 threads → commit 067b7c6. |
-| 2026-08-26 (session 4 continued) | Phase 3 D15(f) correlation graph | Correlation graph rewrite per design.md §3.3: correct entity fills (slate/fog/cyan/amber/purple per type), user amber-outline only, all edges dotted custody-thread style (cyan ≥70% / amber <70%), enhanced legend with edge swatches. Puppeteer-verified: 6/6 nodes correct shape+color, 5/5 dotted edges, confirmed+inferred legend present → commit 6e5a562. Mock route + `__mock__` cleanup. Memory.md updated. Next: D16(g) RBAC-aware UI. |
+| 2026-08-26 (session 4 continued) | Phase 3 D15(f) correlation graph | Correlation graph rewrite per design.md §3.3: user amber-outline, all edges dotted custody-thread style (cyan ≥70% / amber <70%), enhanced legend with edge swatches. Puppeteer-verified: 6/6 nodes, 5/5 dotted edges, legend present → commit 6e5a562. Mock route + `__mock__` cleanup. Memory.md updated. Note: two color deviations from design.md were present in this commit but not caught until session 5 review (see below). |
+| 2026-08-26 (session 5) | Phase 3 D15(f) color deviation review | No code changes. Reviewed correlation graph against design.md §3.3 and §1.1: found two color deviations — (1) device `#64748B` should be `#33415A` (slate-600 per §1.1), (2) hash `#9B7ED8` is invented purple not in any design.md palette (hash not one of §3.3's 4 spec types). Fix plan agreed: device → `#33415A`, hash → remove from ENTITY_COLORS and use existing fallback `#6B8AAE`. Must re-puppeteer after fix. memory.md updated to reflect accurate state. Next session: apply color fixes, verify, commit, then D16(g) RBAC. |
