@@ -4,47 +4,47 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { api, Case } from "@/lib/api-client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 
 export default function CasesPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
-  const [cases, setCases] = useState<Case[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { status } = useSession();
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
-  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
-      return;
-    }
-    if (status === "authenticated") {
-      api.cases
-        .list()
-        .then(setCases)
-        .catch(console.error)
-        .finally(() => setLoading(false));
     }
   }, [status, router]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName.trim()) return;
-    setCreating(true);
-    try {
-      const c = await api.cases.create({ name: newName, description: newDesc || undefined });
-      setCases((prev) => [c, ...prev]);
+  const casesQuery = useQuery({
+    queryKey: ["cases"],
+    queryFn: api.cases.list,
+    enabled: status === "authenticated",
+  });
+
+  const createCase = useMutation({
+    mutationFn: api.cases.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
       setShowCreate(false);
       setNewName("");
       setNewDesc("");
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setCreating(false);
-    }
+    },
+    onError: console.error,
+  });
+
+  const loading =
+    status !== "authenticated" || casesQuery.isPending;
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    createCase.mutate({ name: newName, description: newDesc || undefined });
   };
 
   const statusColor = (s: string) => {
@@ -59,6 +59,8 @@ export default function CasesPage() {
         return "text-fog-200";
     }
   };
+
+  const cases = casesQuery.data ?? [];
 
   return (
     <main className="min-h-screen p-6">
@@ -107,10 +109,10 @@ export default function CasesPage() {
               <div className="flex items-end gap-2">
                 <button
                   type="submit"
-                  disabled={creating || !newName.trim()}
+                  disabled={createCase.isPending || !newName.trim()}
                   className="bg-trace-cyan text-ink-950 px-4 py-2 rounded text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
-                  {creating ? "Creating..." : "Create"}
+                  {createCase.isPending ? "Creating..." : "Create"}
                 </button>
                 <button
                   type="button"

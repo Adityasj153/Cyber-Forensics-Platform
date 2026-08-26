@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
 import { api, Entity, CorrelationEdge } from "@/lib/api-client";
 import CorrelationGraph from "@/components/correlation-graph";
 
@@ -10,27 +11,27 @@ export default function CorrelationPage({
 }: {
   params: { caseId: string };
 }) {
-  const { data: session, status } = useSession();
-  const [entities, setEntities] = useState<Entity[]>([]);
-  const [edges, setEdges] = useState<CorrelationEdge[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { status } = useSession();
+  const authenticated = status === "authenticated";
   const [minConfidence, setMinConfidence] = useState(0);
   const [view, setView] = useState<"graph" | "list">("graph");
 
-  useEffect(() => {
-    if (status !== "authenticated") return;
+  const entitiesQuery = useQuery({
+    queryKey: ["entities", params.caseId],
+    queryFn: () => api.entities.list(params.caseId),
+    enabled: authenticated,
+  });
 
-    Promise.all([
-      api.entities.list(params.caseId),
-      api.correlations.list(params.caseId),
-    ])
-      .then(([ents, corr]) => {
-        setEntities(ents);
-        setEdges(corr);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [params.caseId, status]);
+  const correlationsQuery = useQuery({
+    queryKey: ["correlations", params.caseId],
+    queryFn: () => api.correlations.list(params.caseId),
+    enabled: authenticated,
+  });
+
+  const entities: Entity[] = entitiesQuery.data ?? [];
+  const edges: CorrelationEdge[] = correlationsQuery.data ?? [];
+  const loading =
+    !authenticated || entitiesQuery.isPending || correlationsQuery.isPending;
 
   const filteredEdges = edges.filter((e) => e.confidence >= minConfidence);
 

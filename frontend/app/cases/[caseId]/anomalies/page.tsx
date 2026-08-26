@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useSession } from "next-auth/react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, Anomaly } from "@/lib/api-client";
 import AnomalyPanel from "@/components/anomaly-panel";
 
@@ -10,35 +11,40 @@ export default function AnomaliesPage({
 }: {
   params: { caseId: string };
 }) {
-  const { data: session, status } = useSession();
-  const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { status } = useSession();
+  const authenticated = status === "authenticated";
+  const queryClient = useQueryClient();
   const [filterSeverity, setFilterSeverity] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    api.anomalies
-      .list(params.caseId)
-      .then(setAnomalies)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [params.caseId, status]);
+  const anomaliesQuery = useQuery({
+    queryKey: ["anomalies", params.caseId],
+    queryFn: () => api.anomalies.list(params.caseId),
+    enabled: authenticated,
+  });
 
-  const handleReview = async (id: string, status: "confirmed" | "dismissed") => {
-    try {
-      await api.anomalies.review(params.caseId, id, status);
-      setAnomalies((prev) =>
-        prev.map((a) =>
-          a.id === id
-            ? { ...a, review_status: status }
-            : a
-        )
-      );
-    } catch (err) {
-      console.error(err);
-    }
+  const reviewMutation = useMutation({
+    mutationFn: ({
+      id,
+      reviewStatus,
+    }: {
+      id: string;
+      reviewStatus: "confirmed" | "dismissed";
+    }) => api.anomalies.review(params.caseId, id, reviewStatus),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["anomalies", params.caseId] }),
+    onError: console.error,
+  });
+
+  const anomalies: Anomaly[] = anomaliesQuery.data ?? [];
+  const loading = !authenticated || anomaliesQuery.isPending;
+
+  const handleReview = (
+    id: string,
+    reviewStatus: "confirmed" | "dismissed"
+  ) => {
+    reviewMutation.mutate({ id, reviewStatus });
   };
 
   const filtered = useMemo(() => {

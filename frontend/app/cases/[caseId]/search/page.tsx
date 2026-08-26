@@ -1,57 +1,57 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api, LogEvent } from "@/lib/api-client";
 
 const PAGE_SIZE = 50;
+
+interface SearchFilters {
+  query?: string;
+  source_type?: string;
+  action?: string;
+  ip_address?: string;
+  timestamp_from?: string;
+  timestamp_to?: string;
+  offset: number;
+}
+
+const INITIAL_FILTERS: SearchFilters = { offset: 0 };
 
 export default function SearchPage({
   params,
 }: {
   params: { caseId: string };
 }) {
-  const [events, setEvents] = useState<LogEvent[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [sourceType, setSourceType] = useState("");
   const [action, setAction] = useState("");
   const [ipAddress, setIpAddress] = useState("");
   const [timestampFrom, setTimestampFrom] = useState("");
   const [timestampTo, setTimestampTo] = useState("");
-  const [offset, setOffset] = useState(0);
+  const [filters, setFilters] = useState<SearchFilters>(INITIAL_FILTERS);
 
-  const fetchEvents = async (off = offset) => {
-    setLoading(true);
-    try {
-      const result = await api.search.query(params.caseId, {
-        query: query || undefined,
-        source_type: sourceType || undefined,
-        action: action || undefined,
-        ip_address: ipAddress || undefined,
-        timestamp_from: timestampFrom || undefined,
-        timestamp_to: timestampTo || undefined,
-        offset: off,
-        size: PAGE_SIZE,
-      });
-      setEvents(result.events);
-      setTotal(result.total);
-    } catch (err) {
-      console.error("Search failed:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const searchQuery = useQuery({
+    queryKey: ["search", params.caseId, filters],
+    queryFn: () => api.search.query(params.caseId, { ...filters, size: PAGE_SIZE }),
+  });
 
-  useEffect(() => {
-    fetchEvents(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const events: LogEvent[] = searchQuery.data?.events ?? [];
+  const total = searchQuery.data?.total ?? 0;
+  const loading = searchQuery.isFetching;
+  const offset = filters.offset;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setOffset(0);
-    fetchEvents(0);
+    setFilters({
+      query: query || undefined,
+      source_type: sourceType || undefined,
+      action: action || undefined,
+      ip_address: ipAddress || undefined,
+      timestamp_from: timestampFrom || undefined,
+      timestamp_to: timestampTo || undefined,
+      offset: 0,
+    });
   };
 
   return (
@@ -215,11 +215,12 @@ export default function SearchPage({
       {total > PAGE_SIZE && (
         <div className="flex justify-between items-center mt-4">
           <button
-            onClick={() => {
-              const newOffset = Math.max(0, offset - PAGE_SIZE);
-              setOffset(newOffset);
-              fetchEvents(newOffset);
-            }}
+            onClick={() =>
+              setFilters((f) => ({
+                ...f,
+                offset: Math.max(0, f.offset - PAGE_SIZE),
+              }))
+            }
             disabled={offset === 0}
             className="bg-slate-600 text-fog-200 px-4 py-2 rounded text-sm disabled:opacity-30 hover:opacity-80"
           >
@@ -229,11 +230,9 @@ export default function SearchPage({
             {offset + 1}-{Math.min(offset + PAGE_SIZE, total)} of {total}
           </span>
           <button
-            onClick={() => {
-              const newOffset = offset + PAGE_SIZE;
-              setOffset(newOffset);
-              fetchEvents(newOffset);
-            }}
+            onClick={() =>
+              setFilters((f) => ({ ...f, offset: f.offset + PAGE_SIZE }))
+            }
             disabled={offset + PAGE_SIZE >= total}
             className="bg-slate-600 text-fog-200 px-4 py-2 rounded text-sm disabled:opacity-30 hover:opacity-80"
           >

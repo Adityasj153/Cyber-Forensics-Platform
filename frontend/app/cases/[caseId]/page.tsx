@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, Case, Device, Artifact } from "@/lib/api-client";
 
 export default function CaseOverviewPage({
@@ -12,11 +13,9 @@ export default function CaseOverviewPage({
   params: { caseId: string };
 }) {
   const router = useRouter();
-  const { data: session, status } = useSession();
-  const [caseData, setCaseData] = useState<Case | null>(null);
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { status } = useSession();
+  const authenticated = status === "authenticated";
   const [showAddDevice, setShowAddDevice] = useState(false);
   const [deviceForm, setDeviceForm] = useState({
     device_type: "pc",
@@ -24,58 +23,71 @@ export default function CaseOverviewPage({
     owner: "",
     name: "",
   });
-  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
-      return;
     }
-    if (status !== "authenticated") return;
-    Promise.all([
-      api.cases.get(params.caseId),
-      api.devices.list(params.caseId).catch(() => []),
-      api.artifacts.list(params.caseId).catch(() => []),
-    ])
-      .then(([c, d, a]) => {
-        setCaseData(c);
-        setDevices(d);
-        setArtifacts(a);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [params.caseId, status, router]);
+  }, [status, router]);
 
-  const handleAddDevice = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const dev = await api.devices.create(params.caseId, {
-        device_type: deviceForm.device_type,
-        os: deviceForm.os || undefined,
-        owner: deviceForm.owner || undefined,
-        name: deviceForm.name || undefined,
-      });
-      setDevices((prev) => [...prev, dev]);
+  const caseQuery = useQuery({
+    queryKey: ["case", params.caseId],
+    queryFn: () => api.cases.get(params.caseId),
+    enabled: authenticated,
+  });
+
+  const devicesQuery = useQuery({
+    queryKey: ["devices", params.caseId],
+    queryFn: () => api.devices.list(params.caseId).catch(() => [] as Device[]),
+    enabled: authenticated,
+  });
+
+  const artifactsQuery = useQuery({
+    queryKey: ["artifacts", params.caseId],
+    queryFn: () =>
+      api.artifacts.list(params.caseId).catch(() => [] as Artifact[]),
+    enabled: authenticated,
+  });
+
+  const addDevice = useMutation({
+    mutationFn: (data: Parameters<typeof api.devices.create>[1]) =>
+      api.devices.create(params.caseId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["devices", params.caseId] });
       setShowAddDevice(false);
       setDeviceForm({ device_type: "pc", os: "", owner: "", name: "" });
-    } catch (err) {
-      console.error(err);
-    }
+    },
+    onError: console.error,
+  });
+
+  const uploadArtifact = useMutation({
+    mutationFn: (file: File) => api.artifacts.upload(params.caseId, file),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["artifacts", params.caseId] }),
+    onError: console.error,
+  });
+
+  const caseData: Case | null = caseQuery.data ?? null;
+  const devices: Device[] = devicesQuery.data ?? [];
+  const artifacts: Artifact[] = artifactsQuery.data ?? [];
+  const loading =
+    !authenticated || caseQuery.isPending;
+
+  const handleAddDevice = (e: React.FormEvent) => {
+    e.preventDefault();
+    addDevice.mutate({
+      device_type: deviceForm.device_type,
+      os: deviceForm.os || undefined,
+      owner: deviceForm.owner || undefined,
+      name: deviceForm.name || undefined,
+    });
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    try {
-      const artifact = await api.artifacts.upload(params.caseId, file);
-      setArtifacts((prev) => [artifact, ...prev]);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setUploading(false);
-      e.target.value = "";
-    }
+    uploadArtifact.mutate(file);
+    e.target.value = "";
   };
 
   const statusColor = (s: string) => {
@@ -255,12 +267,12 @@ export default function CaseOverviewPage({
           <div className="flex items-center justify-between p-4 border-b border-slate-600">
             <h2 className="font-display text-sm font-semibold">Artifacts</h2>
             <label className="text-xs text-trace-cyan hover:opacity-80 cursor-pointer">
-              {uploading ? "Uploading..." : "+ Upload File"}
+              {uploadArtifact.isPending ? "Uploading..." : "+ Upload File"}
               <input
                 type="file"
                 className="hidden"
                 onChange={handleUpload}
-                disabled={uploading}
+                disabled={uploadArtifact.isPending}
               />
             </label>
           </div>

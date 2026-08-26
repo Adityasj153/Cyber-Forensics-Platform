@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { api, LogEvent, Device } from "@/lib/api-client";
+import { useQuery } from "@tanstack/react-query";
+import { api, Device } from "@/lib/api-client";
 import Timeline from "@/components/timeline";
 
 export default function TimelinePage({
@@ -10,28 +11,27 @@ export default function TimelinePage({
 }: {
   params: { caseId: string };
 }) {
-  const { data: session, status } = useSession();
-  const [events, setEvents] = useState<LogEvent[]>([]);
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { status } = useSession();
+  const authenticated = status === "authenticated";
   const [filterDevice, setFilterDevice] = useState("");
   const [filterSource, setFilterSource] = useState("");
   const [filterAction, setFilterAction] = useState("");
 
-  useEffect(() => {
-    if (status !== "authenticated") return;
+  const searchQuery = useQuery({
+    queryKey: ["search", params.caseId, { size: 500 }],
+    queryFn: () => api.search.query(params.caseId, { size: 500 }),
+    enabled: authenticated,
+  });
 
-    Promise.all([
-      api.search.query(params.caseId, { size: 500 }),
-      api.devices.list(params.caseId).catch(() => []),
-    ])
-      .then(([searchResult, devs]) => {
-        setEvents(searchResult.events);
-        setDevices(devs);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [params.caseId, status]);
+  const devicesQuery = useQuery({
+    queryKey: ["devices", params.caseId],
+    queryFn: () => api.devices.list(params.caseId).catch(() => [] as Device[]),
+    enabled: authenticated,
+  });
+
+  const events = searchQuery.data?.events ?? [];
+  const devices = devicesQuery.data ?? [];
+  const loading = !authenticated || searchQuery.isPending;
 
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
