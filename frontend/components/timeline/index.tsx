@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
-import { LogEvent } from "@/lib/api-client";
+import { LogEvent, Anomaly } from "@/lib/api-client";
 
 interface TimelineProps {
   events: LogEvent[];
+  anomalies?: Anomaly[];
   loading: boolean;
 }
 
@@ -18,10 +19,17 @@ const SOURCE_COLORS: Record<string, string> = {
   network_generic: "#6B8AAE",
 };
 
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: "#C9483F",
+  high: "#C9483F",
+  medium: "#D98E33",
+  low: "#4FB8C4",
+};
+
 const ACTION_ICONS: Record<string, string> = {
   file_transfer: "↗",
-  usb_transfer: "🔌",
-  bluetooth_transfer: "📡",
+  usb_transfer: "⊕",
+  bluetooth_transfer: "◎",
   email_sent: "✉",
   logon: "→",
   logoff: "←",
@@ -33,7 +41,7 @@ const ACTION_ICONS: Record<string, string> = {
   error: "!",
 };
 
-export default function Timeline({ events, loading }: TimelineProps) {
+export default function Timeline({ events, anomalies = [], loading }: TimelineProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{
@@ -56,6 +64,12 @@ export default function Timeline({ events, loading }: TimelineProps) {
     if (sortedEvents.length === 0) return null;
     return d3.extent(sortedEvents, (d) => new Date(d.timestamp)) as [Date, Date];
   }, [sortedEvents]);
+
+  const anomalyEventIds = useMemo(() => {
+    const ids = new Set<string>();
+    anomalies.forEach((a) => a.event_ids.forEach((id) => ids.add(id)));
+    return ids;
+  }, [anomalies]);
 
   const devices = useMemo(() => {
     const map = new Map<string, LogEvent[]>();
@@ -142,16 +156,48 @@ export default function Timeline({ events, loading }: TimelineProps) {
         .attr("font-weight", "500")
         .text(deviceKey.length > 18 ? deviceKey.slice(0, 18) + "…" : deviceKey);
 
-      // Event markers
+      // ── Custody thread: dotted lines between consecutive events ──
+      const cy = y + yScale.bandwidth() / 2;
+      for (let i = 0; i < deviceEvents.length - 1; i++) {
+        const curr = deviceEvents[i];
+        const next = deviceEvents[i + 1];
+        const x1 = xScale(new Date(curr.timestamp));
+        const x2 = xScale(new Date(next.timestamp));
+
+        const currIsAnomaly = anomalyEventIds.has(curr.id);
+        const nextIsAnomaly = anomalyEventIds.has(next.id);
+
+        // Amber if either event is anomaly (inferred link), cyan otherwise (confirmed)
+        const lineColor =
+          currIsAnomaly || nextIsAnomaly ? "#D98E33" : "#4FB8C4";
+
+        // Opacity stepped by time gap: tighter = more confident
+        const timeGapMs = new Date(next.timestamp).getTime() - new Date(curr.timestamp).getTime();
+        const maxGap = timeExtent[1].getTime() - timeExtent[0].getTime();
+        const gapRatio = maxGap > 0 ? timeGapMs / maxGap : 0;
+        const lineOpacity = Math.max(0.3, 1 - gapRatio * 0.6);
+
+        svg
+          .append("line")
+          .attr("x1", x1)
+          .attr("x2", x2)
+          .attr("y1", cy)
+          .attr("y2", cy)
+          .attr("stroke", lineColor)
+          .attr("stroke-width", 1.5)
+          .attr("stroke-dasharray", "4,3")
+          .attr("opacity", lineOpacity);
+      }
+
+      // ── Event markers ──
       deviceEvents.forEach((event) => {
         const cx = xScale(new Date(event.timestamp));
-        const cy = y + yScale.bandwidth() / 2;
-        const color = SOURCE_COLORS[event.source_type] || "#6B8AAE";
+        const isAnomaly = anomalyEventIds.has(event.id);
         const icon = ACTION_ICONS[event.action] || "·";
 
         const g = svg.append("g").attr("class", "event-marker");
 
-        // Hit area
+        // Hit area (always a circle for easy targeting)
         g.append("circle")
           .attr("cx", cx)
           .attr("cy", cy)
@@ -169,18 +215,46 @@ export default function Timeline({ events, loading }: TimelineProps) {
           .on("mouseleave", () => setTooltip(null))
           .on("click", () => setSelectedEvent(event));
 
-        // Visible marker
-        g.append("circle")
-          .attr("cx", cx)
-          .attr("cy", cy)
-          .attr("r", 5)
-          .attr("fill", color)
-          .attr("opacity", 0.9)
-          .attr("stroke", color)
-          .attr("stroke-width", 1.5)
-          .attr("stroke-opacity", 0.3);
+        if (isAnomaly) {
+          // ── Triangle marker for anomalies ──
+          const severity = event.source_type.includes("critical")
+            ? "critical"
+            : "medium";
+          const triColor = SEVERITY_COLORS[severity] || "#D98E33";
+          const size = 7;
 
-        // Icon
+          // Equilateral triangle pointing up
+          const points = [
+            [cx, cy - size],
+            [cx - size * 0.866, cy + size * 0.5],
+            [cx + size * 0.866, cy + size * 0.5],
+          ]
+            .map((p) => p.join(","))
+            .join(" ");
+
+          g.append("polygon")
+            .attr("points", points)
+            .attr("fill", triColor)
+            .attr("opacity", 0.9)
+            .attr("stroke", triColor)
+            .attr("stroke-width", 1.5)
+            .attr("stroke-opacity", 0.3);
+        } else {
+          // ── Circle marker for confirmed events ──
+          const color = SOURCE_COLORS[event.source_type] || "#6B8AAE";
+
+          g.append("circle")
+            .attr("cx", cx)
+            .attr("cy", cy)
+            .attr("r", 5)
+            .attr("fill", color)
+            .attr("opacity", 0.9)
+            .attr("stroke", color)
+            .attr("stroke-width", 1.5)
+            .attr("stroke-opacity", 0.3);
+        }
+
+        // Action icon
         g.append("text")
           .attr("x", cx)
           .attr("y", cy)
@@ -207,7 +281,7 @@ export default function Timeline({ events, loading }: TimelineProps) {
         .attr("stroke-dasharray", "4,4")
         .attr("opacity", 0.5);
     }
-  }, [sortedEvents, devices, timeExtent]);
+  }, [sortedEvents, devices, timeExtent, anomalyEventIds]);
 
   if (loading) {
     return (
@@ -307,9 +381,11 @@ export default function Timeline({ events, loading }: TimelineProps) {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-3 mt-4 px-4">
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 mt-4 px-4 text-xs text-fog-200/60">
+        {/* Source type colors */}
         {Object.entries(SOURCE_COLORS).map(([key, color]) => (
-          <div key={key} className="flex items-center gap-1.5 text-xs text-fog-200/60">
+          <div key={key} className="flex items-center gap-1.5">
             <div
               className="w-2.5 h-2.5 rounded-full"
               style={{ backgroundColor: color }}
@@ -317,6 +393,36 @@ export default function Timeline({ events, loading }: TimelineProps) {
             {key.replace("_", " ")}
           </div>
         ))}
+        {/* Separator */}
+        <div className="border-l border-slate-600 pl-4 flex items-center gap-4">
+          {/* Confirmed marker */}
+          <div className="flex items-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 12 12">
+              <circle cx="6" cy="6" r="4" fill="#4FB8C4" />
+            </svg>
+            Confirmed
+          </div>
+          {/* Anomaly marker */}
+          <div className="flex items-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 12 12">
+              <polygon points="6,1 1,11 11,11" fill="#D98E33" />
+            </svg>
+            Anomaly
+          </div>
+          {/* Custody thread */}
+          <div className="flex items-center gap-1.5">
+            <svg width="24" height="12" viewBox="0 0 24 12">
+              <line x1="0" y1="6" x2="24" y2="6" stroke="#4FB8C4" strokeWidth="1.5" strokeDasharray="4,3" />
+            </svg>
+            Custody thread
+          </div>
+          <div className="flex items-center gap-1.5">
+            <svg width="24" height="12" viewBox="0 0 24 12">
+              <line x1="0" y1="6" x2="24" y2="6" stroke="#D98E33" strokeWidth="1.5" strokeDasharray="4,3" />
+            </svg>
+            Inferred link
+          </div>
+        </div>
       </div>
     </div>
   );
