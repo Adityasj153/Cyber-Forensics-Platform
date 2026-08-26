@@ -177,7 +177,7 @@ async def list_entities(
             id=str(e.id),
             entity_type=e.entity_type,
             value=e.value,
-            metadata=e.metadata,
+            metadata=e.entity_metadata,
         )
         for e in entities
     ]

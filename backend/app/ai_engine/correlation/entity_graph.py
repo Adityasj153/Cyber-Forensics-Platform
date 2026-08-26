@@ -123,7 +123,7 @@ async def persist_entities(case_id: str, entities: dict, db: AsyncSession) -> li
             case_id=case_id,
             entity_type=data["type"],
             value=data["value"],
-            metadata={"event_count": len(data["events"]), "event_ids": data["events"][:50]},
+            entity_metadata={"event_count": len(data["events"]), "event_ids": data["events"][:50]},
         )
         db.add(entity)
         persisted.append(entity)

@@ -45,7 +45,7 @@ class User(Base):
     username = Column(String(255), unique=True, nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(Enum(UserRole), nullable=False, default=UserRole.VIEWER)
+    role = Column(Enum(UserRole, values_callable=lambda x: [e.value for e in x]), nullable=False, default=UserRole.VIEWER)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     cases = relationship("Case", secondary="case_investigators", back_populates="investigators")
@@ -57,7 +57,7 @@ class Case(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
     name = Column(String(500), nullable=False)
     description = Column(Text, nullable=True)
-    status = Column(Enum(CaseStatus), nullable=False, default=CaseStatus.OPEN)
+    status = Column(Enum(CaseStatus, values_callable=lambda x: [e.value for e in x]), nullable=False, default=CaseStatus.OPEN)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
@@ -100,7 +100,7 @@ class RawArtifact(Base):
     filename = Column(String(500), nullable=False)
     sha256 = Column(String(64), nullable=False, index=True)
     storage_path = Column(String(1000), nullable=False)
-    status = Column(Enum(ArtifactStatus), nullable=False, default=ArtifactStatus.QUEUED)
+    status = Column(Enum(ArtifactStatus, values_callable=lambda x: [e.value for e in x]), nullable=False, default=ArtifactStatus.QUEUED)
     status_reason = Column(Text, nullable=True)
     uploaded_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     uploaded_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
@@ -152,7 +152,7 @@ class Entity(Base):
     case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True)
     entity_type = Column(String(50), nullable=False)  # user, device, file, ip, hash
     value = Column(String(1000), nullable=False)
-    metadata = Column(JSON, nullable=True)
+    entity_metadata = Column("metadata", JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     case = relationship("Case")

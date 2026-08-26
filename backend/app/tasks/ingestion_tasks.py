@@ -6,7 +6,7 @@ from app.core.config import get_settings
 from app.core.security import verify_password, get_user_by_username
 from app.db.session import async_session_factory
 from app.db.models.base_models import RawArtifact, ArtifactStatus
-from app.ingestion.parsers import registry
+import app.ingestion.registry as registry
 from app.ingestion.parsers.windows_evtx import WindowsEVTXParser
 from app.ingestion.parsers.linux_syslog import LinuxSyslogParser
 from app.ingestion.parsers.android_logcat import AndroidLogcatParser
