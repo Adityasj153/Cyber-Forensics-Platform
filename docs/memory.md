@@ -120,7 +120,7 @@
 - [x] node_modules NOT installed in frontend — FIXED 2026-08-26 (`npm install` done; package-lock.json committed). Typecheck/lint now possible locally
 - [x] 8 TS errors blocking `next build` — FIXED (5ccdee3), tsc clean
 - [x] NextAuth env vars NEXTAUTH_URL + NEXTAUTH_SECRET — set in untracked frontend/.env.local (dev value); prod deploy still needs a real secret
-- [ ] Scenario 1 & 2 validation not yet performed (synthetic datasets exist in datasets/synthetic/) — blocks honest Phase 1/2 completion
+- [ ] Scenario 1 & 2 validation not yet performed (synthetic datasets exist in datasets/synthetic/) — blocks honest Phase 1/2 completion. **Also covers Zod schema validation:** all 9 Zod schemas pass against live backend but only verified against empty/near-empty responses (one case, no devices/artifacts/events/anomalies/correlations). Full validation against populated anomaly, correlation, and log-event data should happen when ingesting Scenario 1 & 2 datasets — schemas may need `.nullable()` / optional adjustments once real data shapes appear.
 - [ ] NL query backend has empty __init__.py — Claude API integration not implemented
 - [ ] Reporting module has empty __init__.py — PDF/CSV/JSON export not implemented
 - [ ] Tests exist but not verified against running services
