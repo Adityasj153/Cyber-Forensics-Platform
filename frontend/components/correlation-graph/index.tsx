@@ -11,19 +11,11 @@ interface CorrelationGraphProps {
 }
 
 const ENTITY_COLORS: Record<string, string> = {
-  device: "#4FB8C4",
-  user: "#5FA777",
-  file: "#D98E33",
-  ip: "#9B7ED8",
-  hash: "#C9483F",
-};
-
-const ENTITY_SHAPES: Record<string, string> = {
-  device: "square",
-  user: "circle",
-  file: "diamond",
-  ip: "triangle",
-  hash: "hexagon",
+  device: "#64748B",
+  file: "#C9D2E0",
+  ip: "#4FB8C4",
+  user: "#D98E33",
+  hash: "#9B7ED8",
 };
 
 interface GraphNode extends d3.SimulationNodeDatum {
@@ -70,7 +62,6 @@ export default function CorrelationGraph({
       confidence: e.confidence,
     }));
 
-    // Only include nodes that have at least one edge
     const connectedIds = new Set<string>();
     links.forEach((l) => {
       connectedIds.add(l.source as string);
@@ -141,15 +132,16 @@ export default function CorrelationGraph({
 
     simulationRef.current = simulation;
 
-    // Links
+    // ── Custody-thread edges: dotted lines, cyan/amber by confidence ──
     const link = g
       .append("g")
       .selectAll<SVGLineElement, GraphLink>("line")
       .data(graphData.links)
       .join("line")
-      .attr("stroke", "#33415A")
-      .attr("stroke-width", (d) => Math.max(1, d.confidence * 3))
-      .attr("stroke-opacity", 0.6)
+      .attr("stroke", (d) => (d.confidence >= 0.7 ? "#4FB8C4" : "#D98E33"))
+      .attr("stroke-width", (d) => Math.max(1.5, d.confidence * 3))
+      .attr("stroke-dasharray", "4,3")
+      .attr("stroke-opacity", (d) => Math.max(0.4, d.confidence))
       .attr("marker-end", (d) => {
         const targetNode = graphData.nodes.find(
           (n) => n.id === (d.target as string)
@@ -159,7 +151,7 @@ export default function CorrelationGraph({
           : "url(#arrow-device)";
       });
 
-    // Nodes
+    // ── Nodes ──
     const node = g
       .append("g")
       .selectAll<SVGGElement, GraphNode>("g")
@@ -185,7 +177,7 @@ export default function CorrelationGraph({
           })
       );
 
-    // Node shapes
+    // Node shapes — per design.md §3.3
     node.each(function (d) {
       const el = d3.select(this);
       const size = 10;
@@ -193,6 +185,7 @@ export default function CorrelationGraph({
 
       switch (d.type) {
         case "device":
+          // Slate filled rect
           el.append("rect")
             .attr("x", -size)
             .attr("y", -size)
@@ -203,6 +196,7 @@ export default function CorrelationGraph({
             .attr("opacity", 0.9);
           break;
         case "file":
+          // Fog filled diamond
           el.append("polygon")
             .attr(
               "points",
@@ -212,6 +206,7 @@ export default function CorrelationGraph({
             .attr("opacity", 0.9);
           break;
         case "ip":
+          // Trace-cyan filled triangle
           el.append("polygon")
             .attr(
               "points",
@@ -221,12 +216,22 @@ export default function CorrelationGraph({
             .attr("opacity", 0.9);
           break;
         case "hash":
+          // Purple filled hexagon
           el.append("polygon")
             .attr(
               "points",
               `0,${-size} ${size * 0.87},${-size * 0.5} ${size * 0.87},${size * 0.5} 0,${size} ${-size * 0.87},${size * 0.5} ${-size * 0.87},${-size * 0.5}`
             )
             .attr("fill", color)
+            .attr("opacity", 0.9);
+          break;
+        case "user":
+          // Amber outline only — transparent fill
+          el.append("circle")
+            .attr("r", size)
+            .attr("fill", "none")
+            .attr("stroke", color)
+            .attr("stroke-width", 2)
             .attr("opacity", 0.9);
           break;
         default:
@@ -255,10 +260,9 @@ export default function CorrelationGraph({
       .append("text")
       .attr("dy", -16)
       .attr("text-anchor", "middle")
-      .attr("fill", d => d.color)
+      .attr("fill", (d) => d.color)
       .attr("font-size", "7px")
       .attr("font-weight", "600")
-      .attr("text-transform", "uppercase")
       .attr("letter-spacing", "0.05em")
       .text((d) => d.type);
 
@@ -324,16 +328,36 @@ export default function CorrelationGraph({
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-3 mt-4 px-4">
+      <div className="flex flex-wrap gap-4 mt-4 px-4 text-xs text-fog-200/60">
         {Object.entries(ENTITY_COLORS).map(([key, color]) => (
-          <div key={key} className="flex items-center gap-1.5 text-xs text-fog-200/60">
-            <div
-              className="w-3 h-3 rounded-sm"
-              style={{ backgroundColor: color }}
-            />
+          <div key={key} className="flex items-center gap-1.5">
+            {key === "user" ? (
+              <svg width="12" height="12" viewBox="0 0 12 12">
+                <circle cx="6" cy="6" r="5" fill="none" stroke={color} strokeWidth="2" />
+              </svg>
+            ) : (
+              <div
+                className="w-3 h-3 rounded-sm"
+                style={{ backgroundColor: color }}
+              />
+            )}
             {key}
           </div>
         ))}
+        <div className="border-l border-slate-600 pl-4 flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <svg width="24" height="12" viewBox="0 0 24 12">
+              <line x1="0" y1="6" x2="24" y2="6" stroke="#4FB8C4" strokeWidth="1.5" strokeDasharray="4,3" />
+            </svg>
+            Confirmed (≥70%)
+          </div>
+          <div className="flex items-center gap-1.5">
+            <svg width="24" height="12" viewBox="0 0 24 12">
+              <line x1="0" y1="6" x2="24" y2="6" stroke="#D98E33" strokeWidth="1.5" strokeDasharray="4,3" />
+            </svg>
+            Inferred (&lt;70%)
+          </div>
+        </div>
       </div>
 
       {/* Node Detail */}
