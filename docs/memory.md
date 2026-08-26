@@ -3,7 +3,7 @@
 
 **Purpose:** This file is the source of truth for "where we left off." Read this FIRST at the start of every session, alongside PRD.md, architecture.md, rules.md, and phases.md. Update it BEFORE ending any session — not after, since sessions can end abruptly.
 
-**Last updated:** 2026-08-25 (session 2) by agent
+**Last updated:** 2026-08-26 (session 3) by agent
 
 ---
 
@@ -21,10 +21,10 @@
 
 | Phase | Status | Exit Criteria Verified? | Notes |
 |---|---|---|---|
-| Phase 0 — Setup & Foundations | ✅ Done | ✅ | docker-compose, DB models, backend auth/RBAC, Alembic migrations, audit logging |
-| Phase 1 — Ingestion, Parsing, Basic Search | ✅ Done | ✅ | Upload→hash→store→parse→normalize→ES index fully wired via Celery. 6 parsers registered. Search API exists. |
-| Phase 2 — Storage + AI Engine Prototype | ✅ Done | ✅ | Entity graph, cross-device correlation, isolation forest, ransomware timeline, SHAP explainability, model versioning, Celery async |
-| Phase 3 — Dashboard GUI | 🟨 In Progress | ⬜ | FIX NOW: (a) NextAuth done (not runtime-verified), (b) React Query provider only, pages not migrated — see checklist |
+| Phase 0 — Setup & Foundations | ✅ Done | ✅ | docker-compose, DB models, backend auth/RBAC, Alembic migrations, audit logging. ⚠️ First live boot was 2026-08-26 (see §4 lesson) |
+| Phase 1 — Ingestion, Parsing, Basic Search | ✅ Done | ✅ | Upload→hash→store→parse→normalize→ES index fully wired via Celery. 6 parsers registered. Search API exists. ⚠️ Pipeline code complete but not yet exercised with live data |
+| Phase 2 — Storage + AI Engine Prototype | ✅ Done | ✅ | Entity graph, cross-device correlation, isolation forest, ransomware timeline, SHAP explainability, model versioning, Celery async. ⚠️ Not yet exercised live |
+| Phase 3 — Dashboard GUI | 🟨 In Progress | ⬜ | NextAuth DONE + runtime-verified 2026-08-26 (real login OK). React Query provider only, pages not migrated — see checklist |
 | Phase 4 — Reporting & Benchmarking | ⬜ Not started | — | |
 | Phase 5 — Productization (stretch) | ⬜ Not started | — | |
 
@@ -66,8 +66,7 @@
 ### Phase 3 🟨 In Progress
 - [x] Frontend components scaffolded: timeline, correlation-graph, anomaly-panel, search-filters, nl-query, reports
 - [x] D3 timeline component built (350 lines) — functional but wrong marker styles
-- [x] NextAuth.js code wired — SessionProvider in providers.tsx, [...nextauth] route, lib/auth.ts hooks, localStorage token handling removed (commits 98b7e94, ef9c4a2). ⚠️ Code exists only — NOT runtime-verified (no login flow tested; node_modules not installed, so not even typecheck-verified)
-- [ ] NextAuth runtime verification — actual login against running backend
+- [x] NextAuth.js code wired — SessionProvider in providers.tsx, [...nextauth] route, lib/auth.ts hooks, localStorage token handling removed (commits 98b7e94, ef9c4a2). ✅ RUNTIME-VERIFIED 2026-08-26: real HTTP login flow against live backend — session cookie issued, /api/auth/session returns user+role+id+accessToken, authenticated GET /cases renders 200. Remaining nits: NEXTAUTH_URL + NEXTAUTH_SECRET unset (dev warnings; required for prod build)
 - [x] React Query provider wired — QueryClientProvider in providers.tsx (commit 8b0b00c). ⚠️ Provider only — NOT typecheck-verified (node_modules absent), no page uses it yet
 - [ ] React Query page migration — ALL data fetching still raw useEffect+fetch; zero useQuery/useMutation usages (grep-verified 2026-08-25 session 2)
 - [ ] NOT YET: Zod wired (in package.json but zero imports/usage — grep-verified)
@@ -104,8 +103,18 @@
 - [ ] **D16(g):** Add RBAC-aware UI (viewer/investigator/admin) per phases.md Phase 3.
 - [ ] **D17(h):** Build real root layout — sidebar with case name, nav, auth wrapper.
 
+### Process Lessons
+- **LESSON (2026-08-26): Phases 0-2 were marked "✅ Done" but had NEVER actually been run.** First live boot of the backend required 5 root-cause fixes (reserved `metadata` attr, wrong registry import path, enum name/value mismatch, duplicate CREATE TYPE from ignored `create_type` kwarg, passlib/bcrypt breakage). Rule going forward: **mark an item verified only when it has actually been executed** — code existing on disk is not verification. Distinguish "code complete" from "runtime verified" in every checklist.
+
+### Load-Bearing Environment Facts (do not remove without re-testing)
+- [ ] Backend Docker image REQUIRES `g++` (not just gcc) — shap 0.44.1 builds from source on python:3.12-slim. Removing it breaks `docker compose build backend`.
+- [ ] `bcrypt==4.0.1` is PINNED — passlib 1.7.4 is incompatible with bcrypt>=4.1 at runtime (registration/login 500s). Do not bump bcrypt without replacing passlib.
+- [ ] Dev DB has a working seeded-by-hand user for manual testing: **username `testuser`, password `TestPass123!`, role investigator, email test@example.com** (created via POST /api/auth/register). NextAuth login flow verified against this account 2026-08-26.
+
 ### Other Open Issues
-- [ ] node_modules NOT installed in frontend — nothing typechecks/builds locally; run `npm install` before verifying any frontend work
+- [x] node_modules NOT installed in frontend — FIXED 2026-08-26 (`npm install` done; package-lock.json committed). Typecheck/lint now possible locally
+- [ ] 8 pre-existing TypeScript errors block `next build` (3× Set iteration from tsconfig target es5; 5× D3 typings in correlation-graph) — dev mode ignores them; fix before Phase 4/deploy
+- [ ] NextAuth env vars NEXTAUTH_URL + NEXTAUTH_SECRET not set (.env.local has only NEXT_PUBLIC_API_URL) — dev works with warnings; prod build will fail on NO_SECRET
 - [ ] Scenario 1 & 2 validation not yet performed (synthetic datasets exist in datasets/synthetic/)
 - [ ] NL query backend has empty __init__.py — Claude API integration not implemented
 - [ ] Reporting module has empty __init__.py — PDF/CSV/JSON export not implemented
@@ -124,11 +133,13 @@
 
 - Repo: `C:\Users\adity\OneDrive\Desktop\Project\Cyber Forensics Platform`
 - Branch: `master`
-- `.env` / secrets: `.env.example` exists at root — actual `.env` not tracked (per .gitignore)
+- `.env` / secrets: `.env.example` exists at root — actual `.env` not tracked (per .gitignore); frontend `.env.local` exists with only NEXT_PUBLIC_API_URL
 - Synthetic datasets location: `datasets/synthetic/` — 5 files for Scenario 1 & 2
-- Git: initialized 2026-08-25, initial commit `46814cf`; latest as of session 2: `ef9c4a2` (a), `8b0b00c` (b partial)
+- Git: initialized 2026-08-25; runtime-fix commit `e4a8052` (2026-08-26)
 - Branch convention: still `master`, no feature branches used yet
-- frontend/node_modules NOT installed — no local typecheck/lint possible until `npm install`
+- frontend node_modules installed as of 2026-08-26 — typecheck via `npx tsc --noEmit`
+- Full docker stack boots and works end-to-end (postgres/redis/es/minio/backend); run migrations with `docker compose exec -e PYTHONPATH=/app backend alembic upgrade head`
+- Frontend dev server runs on :3000 (`npm run dev`); compose `frontend` service NOT used in dev (port conflict + build fails on TS errors until fixed)
 
 ---
 
