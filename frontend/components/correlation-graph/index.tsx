@@ -35,8 +35,6 @@ interface GraphNode extends d3.SimulationNodeDatum {
 
 interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
   id: string;
-  source: string;
-  target: string;
   relation: string;
   confidence: number;
 }
@@ -146,7 +144,7 @@ export default function CorrelationGraph({
     // Links
     const link = g
       .append("g")
-      .selectAll("line")
+      .selectAll<SVGLineElement, GraphLink>("line")
       .data(graphData.links)
       .join("line")
       .attr("stroke", "#33415A")
@@ -164,7 +162,7 @@ export default function CorrelationGraph({
     // Nodes
     const node = g
       .append("g")
-      .selectAll("g")
+      .selectAll<SVGGElement, GraphNode>("g")
       .data(graphData.nodes)
       .join("g")
       .attr("cursor", "pointer")
