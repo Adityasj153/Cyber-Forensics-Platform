@@ -13,6 +13,12 @@
   --trace-cyan: #4FB8C4;
   --critical: #C9483F;
   --verified: #5FA777;
+  --disabled: #5A6478;
+
+  --paper-50: #F7F5F0;
+  --ink-900-print: #1A1A1A;
+  --rule-line: #B8B2A6;
+  --print-accent: #B5651D;
 }
 
 body {
