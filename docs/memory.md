@@ -24,7 +24,7 @@
 | Phase 0 — Setup & Foundations | ✅ Done | ✅ | docker-compose, DB models, backend auth/RBAC, Alembic migrations, audit logging. ⚠️ First live boot was 2026-08-26 (see §4 lesson) |
 | Phase 1 — Ingestion, Parsing, Basic Search | ✅ Done | ✅ | Upload→hash→store→parse→normalize→ES index fully wired via Celery. 6 parsers registered. Search API exists. ⚠️ Pipeline code complete but not yet exercised with live data |
 | Phase 2 — Storage + AI Engine Prototype | ✅ Done | ✅ | Entity graph, cross-device correlation, isolation forest, ransomware timeline, SHAP explainability, model versioning, Celery async. ⚠️ Not yet exercised live |
-| Phase 3 — Dashboard GUI | 🟨 In Progress | ⬜ | NextAuth DONE + runtime-verified 2026-08-26 (real login OK). React Query provider only, pages not migrated — see checklist |
+| Phase 3 — Dashboard GUI | 🟨 In Progress | ⬜ | NextAuth ✅ runtime-verified; React Query ✅ all pages migrated (049ab75); remaining: Zod, design tokens, timeline/correlation fixes, RBAC UI, root layout |
 | Phase 4 — Reporting & Benchmarking | ⬜ Not started | — | |
 | Phase 5 — Productization (stretch) | ⬜ Not started | — | |
 
@@ -68,8 +68,9 @@
 - [x] D3 timeline component built (350 lines) — functional but wrong marker styles
 - [x] NextAuth.js code wired — SessionProvider in providers.tsx, [...nextauth] route, lib/auth.ts hooks, localStorage token handling removed (commits 98b7e94, ef9c4a2). ✅ RUNTIME-VERIFIED 2026-08-26: real HTTP login flow against live backend — session cookie issued, /api/auth/session returns user+role+id+accessToken, authenticated GET /cases renders 200. Remaining nits: NEXTAUTH_URL + NEXTAUTH_SECRET unset (dev warnings; required for prod build)
 - [x] React Query provider wired — QueryClientProvider in providers.tsx (commit 8b0b00c). ⚠️ Provider only — NOT typecheck-verified (node_modules absent), no page uses it yet
-- [ ] React Query page migration — ALL data fetching still raw useEffect+fetch; zero useQuery/useMutation usages (grep-verified 2026-08-25 session 2)
-- [ ] NOT YET: Zod wired (in package.json but zero imports/usage — grep-verified)
+- [x] React Query page migration — DONE (commit 049ab75). All 6 data pages (cases list, case detail, timeline, correlation, anomalies, search) use useQuery/useMutation; zero raw useEffect+fetch data fetching remains in app/**. Auth pages intentionally left on signIn()/direct flow. Verified: tsc clean + authenticated smoke test of all routes → 200
+- [x] 8 pre-existing TypeScript errors — FIXED (commit 5ccdee3): tsconfig target es5→ES2017 (Set iteration), explicit D3 selection generics in correlation-graph. `npx tsc --noEmit` is now clean
+- [ ] NOT YET: Zod wired (in package.json but zero imports/usage)
 - [ ] NOT YET: Design-token CSS/Tailwind config from design.md §1-2
 - [ ] NOT YET: Custody thread (dotted connecting lines) in timeline per design.md §3.2
 - [ ] NOT YET: Circle vs triangle markers by type per design.md §3.2
@@ -81,9 +82,9 @@
 
 ## 3. Currently In Progress
 
-- **Module:** Phase 3 frontend — FIX NOW item **D2(b): React Query** (mid-work)
-- **State:** `QueryClientProvider` wired into `frontend/components/providers.tsx` inside SessionProvider (commit 8b0b00c). Pages untouched: every page under `frontend/app/**` still fetches via raw useEffect+fetch; zero useQuery/useMutation imports anywhere (grep-verified). Typed API helpers live in `frontend/lib/api-client.ts` (still plain fetch wrappers).
-- **Next concrete step:** Migrate data fetching to useQuery/useMutation — start with cases list (`app/cases/page.tsx`) and case detail (`app/cases/[caseId]/page.tsx`), then timeline/correlation/anomalies/search pages. Keep fetchers centralized in lib/api-client.ts. Commit when pages compile (`npm install` first — node_modules currently absent, so nothing typechecks locally yet).
+- **Module:** Phase 3 — FIX NOW item **D3(c): Zod** (next up, not started)
+- **State:** D1(a) NextAuth runtime-verified (real login + session accessToken confirmed). D2(b) React Query page migration complete (049ab75). TS errors fixed; `npx tsc --noEmit` clean. NEXTAUTH_URL + a dev NEXTAUTH_SECRET are set in untracked `frontend/.env.local` — NO_SECRET warnings gone, auth stable across recompiles.
+- **Next concrete step:** Wire Zod runtime validation on API responses in lib/api-client.ts — define schemas for Case/Device/Artifact/LogEvent/Anomaly/CorrelationEdge/Entity/SearchResponse and parse in request<T>. Then move to D9(d) design tokens.
 
 ---
 
@@ -94,8 +95,8 @@
 - [ ] **memory.md was blank** — NOW FIXED (populated with real state)
 
 ### FIX NOW List (authoritative, commit after each)
-- [x] **D1(a):** Wire NextAuth.js properly — DONE (commits 98b7e94, ef9c4a2). ⚠️ Not runtime-verified: login flow untested, deps not installed. Verification tracked as its own Phase 3 checklist item.
-- [ ] **D2(b):** Wire React Query — IN PROGRESS: provider committed (8b0b00c); page migration to useQuery/useMutation pending (see §3 for exact next step).
+- [x] **D1(a):** Wire NextAuth.js properly — DONE + RUNTIME-VERIFIED 2026-08-26: real login against live backend, session cookie issued, /api/auth/session returns user+role+id+accessToken, /cases renders authenticated. Dev secret pinned in .env.local.
+- [x] **D2(b):** Wire React Query — DONE (049ab75): provider (8b0b00c) + all data pages migrated to useQuery/useMutation. Smoke-tested authenticated on all routes.
 - [ ] **D3(c):** Wire Zod — runtime validation on API responses.
 - [ ] **D9(d):** Build design-token CSS/Tailwind config from design.md §1-2 (colors, typography). Prerequisite for fixing timeline.
 - [ ] **D14(e):** Fix timeline component — custody thread (dotted connecting line, cyan=confirmed/amber=inferred), circle vs triangle markers by type per design.md §3.2.
@@ -113,8 +114,8 @@
 
 ### Other Open Issues
 - [x] node_modules NOT installed in frontend — FIXED 2026-08-26 (`npm install` done; package-lock.json committed). Typecheck/lint now possible locally
-- [ ] 8 pre-existing TypeScript errors block `next build` (3× Set iteration from tsconfig target es5; 5× D3 typings in correlation-graph) — dev mode ignores them; fix before Phase 4/deploy
-- [ ] NextAuth env vars NEXTAUTH_URL + NEXTAUTH_SECRET not set (.env.local has only NEXT_PUBLIC_API_URL) — dev works with warnings; prod build will fail on NO_SECRET
+- [x] 8 TS errors blocking `next build` — FIXED (5ccdee3), tsc clean
+- [x] NextAuth env vars NEXTAUTH_URL + NEXTAUTH_SECRET — set in untracked frontend/.env.local (dev value); prod deploy still needs a real secret
 - [ ] Scenario 1 & 2 validation not yet performed (synthetic datasets exist in datasets/synthetic/)
 - [ ] NL query backend has empty __init__.py — Claude API integration not implemented
 - [ ] Reporting module has empty __init__.py — PDF/CSV/JSON export not implemented
@@ -149,3 +150,4 @@
 |---|---|---|
 | 2026-08-25 | Setup / Phase 0-3 | Audited full codebase state vs memory.md. Found memory.md blank, no git repo. Initialized git, created .gitignore, made initial commit. Verified Phase 1 ingestion pipeline fully wired (upload→hash→store→parse→normalize→ES). Populated memory.md with real state. Established FIX NOW list (items a–h) for Phase 3 frontend fixes. |
 | 2026-08-25 (session 2) | Phase 3 | Resume/cleanup session. memory.md was stale: item (a) NextAuth had been completed & committed (98b7e94, ef9c4a2) but never logged — flagged mismatch, verified artifacts on disk ([...nextauth] route, lib/auth.ts), marked done-with-caveat (not runtime-verified; node_modules absent). Committed half-finished D2(b) React Query provider (8b0b00c) — pages still raw useEffect+fetch. Synced all sections; next step = migrate pages to useQuery/useMutation per §3. No new features built this session. |
+| 2026-08-26 (session 3) | Phase 0-3 verification + fixes | First-ever live run of the whole stack. npm install done; found+fixed 5 backend root causes (bcrypt pin, g++ in Dockerfile, reserved metadata attr, wrong registry import, postgresql.ENUM create_type + env.py DATABASE_URL_SYNC) → commit e4a8052. LESSON: Phases 0-2 were "done" but never run. NextAuth runtime-verified with real login (testuser). Fixed 8 TS errors incl. sa.Enum/tsconfig findings → 5ccdee3. D2(b) complete: all 6 data pages migrated to React Query, smoke-tested authenticated → 049ab75. Pinned NEXTAUTH_SECRET in .env.local to stop recompile-induced auth flakiness. Next: D3(c) Zod. |
