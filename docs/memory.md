@@ -72,7 +72,7 @@
 - [x] React Query provider wired — QueryClientProvider in providers.tsx (commit 8b0b00c), now used by every data page (see next item)
 - [x] React Query page migration — DONE (commit 049ab75). All 6 data pages (cases list, case detail, timeline, correlation, anomalies, search) use useQuery/useMutation; zero raw useEffect+fetch data fetching remains in app/**. Auth pages intentionally left on signIn()/direct flow. Verified: tsc clean + authenticated smoke test of all routes → 200
 - [x] 8 pre-existing TypeScript errors — FIXED (commit 5ccdee3): tsconfig target es5→ES2017 (Set iteration), explicit D3 selection generics in correlation-graph. `npx tsc --noEmit` is now clean
-- [ ] NOT YET: Zod wired (in package.json but zero imports/usage)
+- [x] Zod wired — runtime validation on ALL API responses (commit 7ab8861): 9 schemas in lib/api-client.ts, types inferred via z.infer, request<T> parses through optional schema, tsc clean
 - [x] Design-token CSS/Tailwind config — PARTIAL (see §4 D9(d) notes below)
 - [ ] NOT YET: Custody thread (dotted connecting lines) in timeline per design.md §3.2
 - [ ] NOT YET: Circle vs triangle markers by type per design.md §3.2
@@ -84,9 +84,9 @@
 
 ## 3. Currently In Progress
 
-- **Module:** Phase 3 — FIX NOW item **D3(c): Zod** (next up, in progress)
-- **State:** D1(a) NextAuth runtime-verified. D2(b) React Query page migration complete. D9(d) Design tokens PARTIAL (core colors ✅, font families ✅; missing: disabled color, light-mode tokens, type scale). TS clean; `npx tsc --noEmit` clean. NEXTAUTH_URL + dev NEXTAUTH_SECRET in untracked `frontend/.env.local`.
-- **Next concrete step:** Wire Zod runtime validation on API responses in lib/api-client.ts — define schemas for Case/Device/Artifact/LogEvent/Anomaly/CorrelationEdge/Entity/SearchResponse and parse in request&lt;T&gt;. Then complete remaining design tokens (D9d), then D14(e) timeline fix.
+- **Module:** Phase 3 — FIX NOW item **D9(d): Complete design tokens** (next up)
+- **State:** D1(a) NextAuth runtime-verified. D2(b) React Query page migration complete. D3(c) Zod DONE (7ab8861) — 9 schemas parse all API responses. D9(d) Design tokens PARTIAL (core colors ✅, font families ✅; missing: disabled color, light-mode tokens, type scale). TS clean; `npx tsc --noEmit` clean.
+- **Next concrete step:** Complete remaining design tokens (D9d): add disabled color #5A6478, light-mode tokens (paper-50, ink-900-print, rule-line, print-accent), type scale sizes. Then D14(e) timeline fix.
 
 ---
 
@@ -99,7 +99,7 @@
 ### FIX NOW List (authoritative, commit after each)
 - [x] **D1(a):** Wire NextAuth.js properly — DONE + RUNTIME-VERIFIED 2026-08-26: real login against live backend, session cookie issued, /api/auth/session returns user+role+id+accessToken, /cases renders authenticated. Dev secret pinned in .env.local.
 - [x] **D2(b):** Wire React Query — DONE (049ab75): provider (8b0b00c) + all data pages migrated to useQuery/useMutation. Smoke-tested authenticated on all routes.
-- [x] **D3(c):** Wire Zod — runtime validation on API responses. *(in progress — session 4)*
+- [x] **D3(c):** Wire Zod — DONE (7ab8861): 9 Zod schemas (Case, Device, Artifact, LogEvent, Anomaly, CorrelationEdge, Entity, SearchResponse, User) in lib/api-client.ts. All API methods pass schema to request<T> which parses on every response. Types inferred from schemas (no duplicate interfaces). tsc clean.
 - [x] **D9(d):** Build design-token CSS/Tailwind config — **PARTIAL.** `tailwind.config.js` + `globals.css` have all 8 core color tokens matching design.md §1.1/§1.2 exactly (ink-950, slate-800, slate-600, fog-200, evidence-amber, trace-cyan, critical, verified). Font families match §2.1 (IBM Plex Sans Condensed/Body, JetBrains Mono). **Missing:** disabled/archived semantic color `#5A6478` (§1.2), all light-mode tokens (§1.3: paper-50, ink-900-print, rule-line, print-accent), and detailed type scale sizes/weights (§2.2: display-lg/sm, body-lg/sm, label, mono-md/sm). Google Fonts import covers all required weights.
 - [ ] **D14(e):** Fix timeline component — custody thread (dotted connecting line, cyan=confirmed/amber=inferred), circle vs triangle markers by type per design.md §3.2.
 - [ ] **D15(f):** Fix correlation graph — dotted custody-thread edge style, correct entity colors per design.md §3.3.
@@ -141,7 +141,7 @@
 - Branch: `master`
 - `.env` / secrets: `.env.example` exists at root — actual `.env` not tracked (per .gitignore); frontend `.env.local` (untracked) contains NEXT_PUBLIC_API_URL, NEXTAUTH_URL, NEXTAUTH_SECRET (dev-only value)
 - Synthetic datasets location: `datasets/synthetic/` — 5 files for Scenario 1 & 2
-- Git: initialized 2026-08-25; session-3 commits: `e4a8052` (backend runtime fixes), `5ccdee3` (TS fixes), `049ab75` (React Query migration); session-4 commit: `d67109c` (memory sync)
+- Git: initialized 2026-08-25; session-3 commits: `e4a8052` (backend runtime fixes), `5ccdee3` (TS fixes), `049ab75` (React Query migration); session-4 commits: `bc7d3d9` (memory sync), `7ab8861` (Zod wiring)
 - Branch convention: still `master`, no feature branches used yet
 - frontend node_modules installed as of 2026-08-26 — typecheck via `npx tsc --noEmit`
 - Full docker stack boots and works end-to-end (postgres/redis/es/minio/backend); run migrations with `docker compose exec -e PYTHONPATH=/app backend alembic upgrade head`
@@ -156,4 +156,4 @@
 | 2026-08-25 | Setup / Phase 0-3 | Audited full codebase state vs memory.md. Found memory.md blank, no git repo. Initialized git, created .gitignore, made initial commit. Verified Phase 1 ingestion pipeline fully wired (upload→hash→store→parse→normalize→ES). Populated memory.md with real state. Established FIX NOW list (items a–h) for Phase 3 frontend fixes. |
 | 2026-08-25 (session 2) | Phase 3 | Resume/cleanup session. memory.md was stale: item (a) NextAuth had been completed & committed (98b7e94, ef9c4a2) but never logged — flagged mismatch, verified artifacts on disk ([...nextauth] route, lib/auth.ts), marked done-with-caveat (not runtime-verified; node_modules absent). Committed half-finished D2(b) React Query provider (8b0b00c) — pages still raw useEffect+fetch. Synced all sections; next step = migrate pages to useQuery/useMutation per §3. No new features built this session. |
 | 2026-08-26 (session 3) | Phase 0-3 verification + fixes | First-ever live run of the whole stack. npm install done; found+fixed 5 backend root causes (bcrypt pin, g++ in Dockerfile, reserved metadata attr, wrong registry import, postgresql.ENUM create_type + env.py DATABASE_URL_SYNC) → commit e4a8052. LESSON: Phases 0-2 were "done" but never run. NextAuth runtime-verified with real login (testuser). Fixed 8 TS errors incl. sa.Enum/tsconfig findings → 5ccdee3. D2(b) complete: all 6 data pages migrated to React Query, smoke-tested authenticated → 049ab75. Pinned NEXTAUTH_SECRET in .env.local to stop recompile-induced auth flakiness. Wrap-up verification pass: audit logging CONFIRMED at runtime (user_registered/user_login/case_created rows); discovered CI workflow never existed → Phase 0 item unchecked, Phase 0/1/2 status downgraded to honest 🟨 code-complete/verified states. Next: D3(c) Zod, then CI workflow + Scenario validation to close Phases 0-2 honestly. |
-| 2026-08-26 (session 4) | Phase 0-3 corrections + Zod | Cross-checked memory.md vs repo: found 2 stale claims (CI exists but never ran; design tokens partial). Verified CI `.github/workflows/ci.yml` exists (3 jobs) but triggers on `main` while branch is `master` — never executed. Verified design tokens: core colors §1.1/§1.2 exact match, fonts §2.1 match; missing disabled color, light-mode tokens, type scale §2.2. Updated memory.md with corrections. Next: wire Zod (D3(c)). |
+| 2026-08-26 (session 4) | Phase 0-3 corrections + Zod | Cross-checked memory.md vs repo: found 2 stale claims (CI exists but never ran; design tokens partial). Verified CI `.github/workflows/ci.yml` exists (3 jobs) but triggers on `main` while branch is `master` — never executed. Verified design tokens: core colors §1.1/§1.2 exact match, fonts §2.1 match; missing disabled color, light-mode tokens, type scale §2.2. Updated memory.md with corrections (commit bc7d3d9). Wired Zod in api-client.ts: 9 schemas, all API methods parse responses, types inferred → commit 7ab8861. D3(c) complete. |
