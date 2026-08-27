@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_access_token
-from app.db.models.base_models import User, UserRole
+from app.db.models.base_models import CaseInvestigator, User, UserRole
 from app.db.session import get_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -43,3 +43,24 @@ def require_role(*allowed_roles: UserRole):
             )
         return current_user
     return role_checker
+
+
+async def require_case_access(
+    case_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    if current_user.role == UserRole.ADMIN:
+        return current_user
+    result = await db.execute(
+        select(CaseInvestigator).where(
+            CaseInvestigator.case_id == case_id,
+            CaseInvestigator.user_id == current_user.id,
+        )
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not assigned to this case",
+        )
+    return current_user

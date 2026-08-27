@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, require_role
+from app.api.deps import get_current_user, require_case_access, require_role
 from app.core.audit import log_audit_event
 from app.db.models.base_models import Anomaly, CorrelationEdge, Entity, User, UserRole
 from app.db.session import get_db
@@ -59,7 +59,7 @@ async def list_anomalies(
     severity: str | None = Query(None),
     category: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_case_access),
 ):
     stmt = select(Anomaly).where(Anomaly.case_id == case_id).order_by(Anomaly.score.desc())
     if severity:
@@ -128,7 +128,7 @@ async def list_correlations(
     relation_type: str | None = Query(None),
     min_confidence: float = Query(0.0, ge=0.0, le=1.0),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_case_access),
 ):
     stmt = (
         select(CorrelationEdge)
@@ -163,7 +163,7 @@ async def list_entities(
     case_id: str,
     entity_type: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_case_access),
 ):
     stmt = select(Entity).where(Entity.case_id == case_id)
     if entity_type:

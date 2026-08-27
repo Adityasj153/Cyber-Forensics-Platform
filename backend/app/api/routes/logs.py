@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, require_role
+from app.api.deps import get_current_user, require_case_access, require_role
 from app.core.audit import log_audit_event
 from app.db.models.base_models import (
     ArtifactStatus,
@@ -96,7 +96,7 @@ async def create_device(
 async def list_devices(
     case_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_case_access),
 ):
     result = await db.execute(select(Device).where(Device.case_id == case_id))
     devices = result.scalars().all()
@@ -188,7 +188,7 @@ async def upload_log(
 async def list_artifacts(
     case_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_case_access),
 ):
     result = await db.execute(
         select(RawArtifact).where(RawArtifact.case_id == case_id).order_by(RawArtifact.uploaded_at.desc())

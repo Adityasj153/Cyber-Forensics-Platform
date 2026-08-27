@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
+import { RoleGate } from "@/lib/rbac";
 
 export default function CasesPage() {
   const router = useRouter();
@@ -67,15 +68,18 @@ export default function CasesPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="font-display text-2xl font-semibold">Cases</h1>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="bg-trace-cyan text-ink-950 px-4 py-2 rounded text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            + New Case
-          </button>
+          <RoleGate roles={["admin", "investigator"]}>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="bg-trace-cyan text-ink-950 px-4 py-2 rounded text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              + New Case
+            </button>
+          </RoleGate>
         </div>
 
-        {showCreate && (
+        <RoleGate roles={["admin", "investigator"]}>
+          {showCreate && (
           <form
             onSubmit={handleCreate}
             className="bg-slate-800 border border-slate-600 rounded-lg p-4 mb-6"
@@ -124,7 +128,8 @@ export default function CasesPage() {
               </div>
             </div>
           </form>
-        )}
+          )}
+        </RoleGate>
 
         {loading ? (
           <div className="text-center py-12 text-fog-200/40">Loading cases...</div>

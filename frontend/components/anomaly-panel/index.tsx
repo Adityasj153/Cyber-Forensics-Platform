@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Anomaly } from "@/lib/api-client";
+import { useRole } from "@/lib/rbac";
 
 interface AnomalyPanelProps {
   anomaly: Anomaly;
@@ -24,6 +25,8 @@ const SEVERITY_TEXT: Record<string, string> = {
 
 export default function AnomalyPanel({ anomaly, onReview }: AnomalyPanelProps) {
   const [expanded, setExpanded] = useState(false);
+  const role = useRole();
+  const canReview = role === "admin" || role === "investigator";
 
   const explanation = anomaly.explanation as Record<string, unknown> | null;
   const featureImportances = explanation?.feature_importances as
@@ -201,7 +204,7 @@ export default function AnomalyPanel({ anomaly, onReview }: AnomalyPanelProps) {
           )}
 
           {/* Review Actions */}
-          {anomaly.review_status === "pending" && (
+          {anomaly.review_status === "pending" && canReview && (
             <div className="flex gap-2 pt-2 border-t border-slate-600/30">
               <button
                 onClick={(e) => {

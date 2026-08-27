@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, Case, Device, Artifact } from "@/lib/api-client";
+import { RoleGate } from "@/lib/rbac";
 
 export default function CaseOverviewPage({
   params,
@@ -161,14 +162,17 @@ export default function CaseOverviewPage({
         <div className="bg-slate-800 border border-slate-600 rounded-lg">
           <div className="flex items-center justify-between p-4 border-b border-slate-600">
             <h2 className="font-display text-sm font-semibold">Devices</h2>
-            <button
-              onClick={() => setShowAddDevice(true)}
-              className="text-xs text-trace-cyan hover:opacity-80"
-            >
-              + Add Device
-            </button>
+            <RoleGate roles={["admin", "investigator"]}>
+              <button
+                onClick={() => setShowAddDevice(true)}
+                className="text-xs text-trace-cyan hover:opacity-80"
+              >
+                + Add Device
+              </button>
+            </RoleGate>
           </div>
-          {showAddDevice && (
+          <RoleGate roles={["admin", "investigator"]}>
+            {showAddDevice && (
             <form
               onSubmit={handleAddDevice}
               className="p-4 border-b border-slate-600 bg-ink-950/50"
@@ -230,7 +234,8 @@ export default function CaseOverviewPage({
                 </button>
               </div>
             </form>
-          )}
+            )}
+          </RoleGate>
           <div className="p-4">
             {devices.length === 0 ? (
               <p className="text-fog-200/40 text-sm text-center py-4">
@@ -266,15 +271,17 @@ export default function CaseOverviewPage({
         <div className="bg-slate-800 border border-slate-600 rounded-lg">
           <div className="flex items-center justify-between p-4 border-b border-slate-600">
             <h2 className="font-display text-sm font-semibold">Artifacts</h2>
-            <label className="text-xs text-trace-cyan hover:opacity-80 cursor-pointer">
-              {uploadArtifact.isPending ? "Uploading..." : "+ Upload File"}
-              <input
-                type="file"
-                className="hidden"
-                onChange={handleUpload}
-                disabled={uploadArtifact.isPending}
-              />
-            </label>
+            <RoleGate roles={["admin", "investigator"]}>
+              <label className="text-xs text-trace-cyan hover:opacity-80 cursor-pointer">
+                {uploadArtifact.isPending ? "Uploading..." : "+ Upload File"}
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={handleUpload}
+                  disabled={uploadArtifact.isPending}
+                />
+              </label>
+            </RoleGate>
           </div>
           <div className="p-4">
             {artifacts.length === 0 ? (

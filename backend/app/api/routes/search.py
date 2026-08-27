@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import require_case_access
 from app.db.models.base_models import User
 from app.db.session import get_db
 from app.storage.search_index import search_log_events
@@ -28,7 +28,7 @@ async def search_events(
     from_: int = Query(0, alias="offset", ge=0, description="Offset for pagination"),
     size: int = Query(50, ge=1, le=200, description="Max results per page"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_case_access),
 ):
     result = search_log_events(
         case_id=case_id,

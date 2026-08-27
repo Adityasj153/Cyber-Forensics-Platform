@@ -15,7 +15,6 @@ class RegisterRequest(BaseModel):
     username: str
     email: str
     password: str
-    role: UserRole = UserRole.VIEWER
 
 
 class LoginRequest(BaseModel):
@@ -43,7 +42,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Username already taken")
 
-    user = await create_user(db, body.username, body.email, body.password, body.role)
+    user = await create_user(db, body.username, body.email, body.password, UserRole.VIEWER)
     await log_audit_event(db, action="user_registered", target_type="user", target_id=str(user.id))
     return UserResponse(
         id=str(user.id),

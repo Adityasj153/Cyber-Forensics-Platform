@@ -150,6 +150,16 @@ async def update_case(
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
 
+    if current_user.role != UserRole.ADMIN:
+        inv_result = await db.execute(
+            select(CaseInvestigator).where(
+                CaseInvestigator.case_id == case.id,
+                CaseInvestigator.user_id == current_user.id,
+            )
+        )
+        if not inv_result.scalar_one_or_none():
+            raise HTTPException(status_code=403, detail="Not assigned to this case")
+
     if body.name is not None:
         case.name = body.name
     if body.description is not None:
