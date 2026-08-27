@@ -11,11 +11,10 @@ interface CorrelationGraphProps {
 }
 
 const ENTITY_COLORS: Record<string, string> = {
-  device: "#64748B",
+  device: "#33415A",
   file: "#C9D2E0",
   ip: "#4FB8C4",
   user: "#D98E33",
-  hash: "#9B7ED8",
 };
 
 interface GraphNode extends d3.SimulationNodeDatum {
