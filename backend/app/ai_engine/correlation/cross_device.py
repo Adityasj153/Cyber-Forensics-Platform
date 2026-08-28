@@ -12,6 +12,14 @@ logger = structlog.get_logger()
 MODEL_VERSION = "cross_device_v1"
 
 
+def _pair_devices(devices: set) -> list[tuple[str, str]]:
+    """Return device key pairs for correlation edges (deterministic ordering)."""
+    ordered = sorted(devices)
+    if len(ordered) >= 2:
+        return [(ordered[0], ordered[1])]
+    return []
+
+
 async def run_cross_device_correlation(case_id: str, db: AsyncSession) -> list[dict]:
     graph, entities = await build_entity_graph(case_id, db)
     persisted_entities = await persist_entities(case_id, entities, db)
@@ -48,15 +56,16 @@ async def run_cross_device_correlation(case_id: str, db: AsyncSession) -> list[d
                 evidence_count=len(evidence_events),
             )
 
-            edge_record = {
-                "entity_a_id": None,
-                "entity_b_id": None,
-                "relation_type": "cross_device_file",
-                "confidence": confidence,
-                "evidence_event_ids": evidence_events[:50],
-                "explanation": explanation,
-            }
-            edges_found.append(edge_record)
+            for a_key, b_key in _pair_devices(connected_devices):
+                edge_record = {
+                    "entity_a_key": a_key,
+                    "entity_b_key": b_key,
+                    "relation_type": "cross_device_file",
+                    "confidence": confidence,
+                    "evidence_event_ids": evidence_events[:50],
+                    "explanation": explanation,
+                }
+                edges_found.append(edge_record)
 
     # Find file appearing on device + being transferred (USB/BT/email)
     file_nodes = [n for n in graph.nodes if graph.nodes[n].get("entity_type") == "file"]
@@ -83,15 +92,16 @@ async def run_cross_device_correlation(case_id: str, db: AsyncSession) -> list[d
                 },
                 evidence_count=0,
             )
-            edge_record = {
-                "entity_a_id": None,
-                "entity_b_id": None,
-                "relation_type": "file_transfer_chain",
-                "confidence": confidence,
-                "evidence_event_ids": [],
-                "explanation": explanation,
-            }
-            edges_found.append(edge_record)
+            for a_key, b_key in _pair_devices(connected_devices):
+                edge_record = {
+                    "entity_a_key": a_key,
+                    "entity_b_key": b_key,
+                    "relation_type": "file_transfer_chain",
+                    "confidence": confidence,
+                    "evidence_event_ids": [],
+                    "explanation": explanation,
+                }
+                edges_found.append(edge_record)
 
     # Find IP connected to multiple devices
     ip_nodes = [n for n in graph.nodes if graph.nodes[n].get("entity_type") == "ip"]
@@ -115,29 +125,30 @@ async def run_cross_device_correlation(case_id: str, db: AsyncSession) -> list[d
                 },
                 evidence_count=0,
             )
-            edge_record = {
-                "entity_a_id": None,
-                "entity_b_id": None,
-                "relation_type": "shared_ip",
-                "confidence": confidence,
-                "evidence_event_ids": [],
-                "explanation": explanation,
-            }
-            edges_found.append(edge_record)
+            for a_key, b_key in _pair_devices(connected_devices):
+                edge_record = {
+                    "entity_a_key": a_key,
+                    "entity_b_key": b_key,
+                    "relation_type": "shared_ip",
+                    "confidence": confidence,
+                    "evidence_event_ids": [],
+                    "explanation": explanation,
+                }
+                edges_found.append(edge_record)
 
-    # Persist correlation edges
+    # Persist correlation edges, linking the actual correlated entities
     entity_map = {e.entity_type + ":" + e.value: e for e in persisted_entities}
     for edge_data in edges_found:
         a_key = edge_data.get("entity_a_key")
         b_key = edge_data.get("entity_b_key")
-        entity_a_id = entity_map[a_key].id if a_key and a_key in entity_map else persisted_entities[0].id if persisted_entities else None
-        entity_b_id = entity_map[b_key].id if b_key and b_key in entity_map else persisted_entities[-1].id if persisted_entities else None
+        entity_a = entity_map.get(a_key) if a_key else None
+        entity_b = entity_map.get(b_key) if b_key else None
 
-        if entity_a_id and entity_b_id:
+        if entity_a and entity_b:
             edge = CorrelationEdge(
                 case_id=case_id,
-                entity_a_id=entity_a_id,
-                entity_b_id=entity_b_id,
+                entity_a_id=entity_a.id,
+                entity_b_id=entity_b.id,
                 relation_type=edge_data["relation_type"],
                 confidence=edge_data["confidence"],
                 evidence_event_ids=edge_data["evidence_event_ids"],
