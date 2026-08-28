@@ -7,6 +7,18 @@ import re
 from app.ingestion.parsers.base import BaseParser, ParsedEvent
 
 
+def normalize_hash(value):
+    """Normalize a file hash to fit the file_hash String(64) column.
+
+    Hashes are treated as 64-char sha256 hex strings. Any longer value (e.g. a
+    66-char odd-length hex in some sources) is truncated to 64 chars to match
+    the behavior of the windows_evtx and android parsers.
+    """
+    if not value:
+        return None
+    return str(value)[:64].lower()
+
+
 class NetworkGenericParser(BaseParser):
     source_type = "network_generic"
 
@@ -88,7 +100,7 @@ class NetworkGenericParser(BaseParser):
             action=action,
             object=obj,
             ip_address=ip,
-            file_hash=file_hash,
+            file_hash=normalize_hash(file_hash),
             detail=item.get("detail") or json.dumps(item)[:2000],
             raw_line=json.dumps(item)[:5000],
             extra=item,
@@ -106,7 +118,7 @@ class NetworkGenericParser(BaseParser):
                 action=row.get("action") or row.get("event") or "network_event",
                 object=row.get("dest_ip") or row.get("destination") or row.get("dst"),
                 ip_address=row.get("src_ip") or row.get("source_ip"),
-                file_hash=row.get("hash") or row.get("sha256"),
+                file_hash=normalize_hash(row.get("hash") or row.get("sha256")),
                 detail=str(dict(row))[:2000],
                 raw_line=str(dict(row))[:5000],
                 extra=dict(row),

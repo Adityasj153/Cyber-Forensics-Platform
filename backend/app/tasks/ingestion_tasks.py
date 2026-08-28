@@ -102,12 +102,26 @@ def parse_log_file(self, artifact_id: str, case_id: str, device_id: str | None =
                 # Persist normalized events to Postgres (source of truth for the AI engine)
                 await persist_log_events(db, normalized)
 
-                # Index into Elasticsearch
-                index_log_events_bulk(normalized)
-
-                # Update artifact status
+                # Mark parsed and commit the DB transaction BEFORE touching the
+                # search index. If the DB commit fails, the artifact is marked
+                # parse_failed and the (unchanged) normalized events are never
+                # indexed, keeping Postgres and Elasticsearch consistent.
                 artifact.status = ArtifactStatus.PARSED
                 await db.commit()
+
+                # Index into Elasticsearch only after a successful DB commit. The
+                # search index is secondary to Postgres, so a failure here must not
+                # flip the artifact back to parse_failed (would de-sync DB from
+                # status); it is logged and the index can be rebuilt via re-run.
+                try:
+                    index_log_events_bulk(normalized)
+                except Exception:
+                    logger.error(
+                        "es_index_failed",
+                        artifact_id=artifact_id,
+                        case_id=case_id,
+                        exc_info=True,
+                    )
 
                 logger.info(
                     "log_parsed_successfully",

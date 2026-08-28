@@ -23,6 +23,7 @@ each test disposes the engine when finished to force a fresh pool in the next
 test's loop, avoiding "Future attached to a different loop".
 """
 import asyncio
+import json
 import uuid
 from datetime import datetime, timezone
 
@@ -306,3 +307,83 @@ async def test_search_size_cap_allows_timeline_request():
     assert maximum is not None and maximum >= 500, (
         f"search size maximum ({maximum}) must be >= 500 (frontend timeline requests 500)"
     )
+
+
+# --------------------------------------------------------------------------- #
+# Bug #6 - network_generic: a >64-char file_hash must be truncated to fit the
+#          file_hash String(64) column (Scenario 2 ransom JSON was 66 chars and
+#          aborted the whole artifact's Postgres persistence).
+# --------------------------------------------------------------------------- #
+async def test_normalize_hash_truncates_overlong_hash():
+    from app.ingestion.parsers.network_generic import normalize_hash
+
+    long = "ff" * 33  # 66 chars, longer than String(64)
+    truncated = normalize_hash(long)
+    assert truncated is not None
+    assert len(truncated) == 64
+    assert truncated == "ff" * 32
+    assert truncated.islower()
+
+    assert normalize_hash(None) is None
+    assert normalize_hash("") is None
+    assert normalize_hash("AbC") == "abc", "hash should be lowercased"
+
+
+async def test_network_generic_parses_and_truncates_hash():
+    from app.ingestion.parsers.network_generic import NetworkGenericParser
+
+    payload = json.dumps(
+        [
+            {
+                "timestamp": "2026-08-21T14:05:00Z",
+                "action": "download_complete",
+                "object": "invoice_2026.exe",
+                "hash": "ff" * 33,  # 66 chars
+            }
+        ]
+    ).encode()
+    events = NetworkGenericParser().parse(payload)
+    assert len(events) == 1
+    assert events[0].file_hash == "ff" * 32
+    assert len(events[0].file_hash) == 64
+
+
+async def test_persist_log_events_accepts_truncated_hash():
+    """A 64-char hash (as produced by normalize_hash) persists without error."""
+    from app.ingestion.parsers.network_generic import normalize_hash
+
+    ids = await _seed_case()
+    normalized = [
+        {
+            "id": str(uuid.uuid4()),
+            "case_id": str(ids["case_id"]),
+            "device_id": str(ids["dev1"]),
+            "artifact_id": str(ids["artifact_id"]),
+            "timestamp": datetime(2026, 8, 21, 14, 5, 0, tzinfo=timezone.utc),
+            "source_type": "network_generic",
+            "actor": None,
+            "action": "download_complete",
+            "object": "invoice_2026.exe",
+            "ip_address": None,
+            "file_hash": normalize_hash("ff" * 33),
+            "detail": None,
+            "raw_line": "raw",
+        }
+    ]
+    try:
+        async with async_session_factory() as db:
+            written = await persist_log_events(db, normalized)
+            assert written == 1
+            await db.commit()
+
+            result = await db.execute(
+                select(LogEvent).where(LogEvent.case_id == ids["case_id"])
+            )
+            rows = result.scalars().all()
+
+        assert len(rows) == 1
+        assert rows[0].file_hash == "ff" * 32
+    finally:
+        await _cleanup(ids)
+        await engine.dispose()
+
