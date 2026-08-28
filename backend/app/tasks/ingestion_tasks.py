@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.security import verify_password, get_user_by_username
 from app.db.session import async_session_factory
-from app.db.models.base_models import RawArtifact, ArtifactStatus
+from app.db.models.base_models import RawArtifact, ArtifactStatus, LogEvent
 import app.ingestion.registry as registry
 from app.ingestion.parsers.windows_evtx import WindowsEVTXParser
 from app.ingestion.parsers.linux_syslog import LinuxSyslogParser
@@ -30,11 +30,36 @@ registry.register_parser(EmailHeadersParser())
 registry.register_parser(NetworkGenericParser())
 
 
+async def persist_log_events(db: AsyncSession, normalized: list[dict]) -> int:
+    """Persist normalized events to Postgres (source of truth for the AI engine).
+
+    Extracted from the parse task so the persistence bug that previously left
+    LogEvent rows unpersisted (AI saw nothing) has a direct regression test.
+    """
+    for ev in normalized:
+        db.add(
+            LogEvent(
+                id=ev["id"],
+                case_id=ev["case_id"],
+                device_id=ev["device_id"],
+                artifact_id=ev["artifact_id"],
+                timestamp=ev["timestamp"],
+                source_type=ev["source_type"],
+                actor=ev["actor"],
+                action=ev["action"],
+                object=ev["object"],
+                ip_address=ev["ip_address"],
+                file_hash=ev["file_hash"],
+                detail=ev["detail"],
+                raw_line=ev["raw_line"],
+            )
+        )
+    return len(normalized)
+
+
 @celery_app.task(name="tasks.parse_log_file", bind=True, max_retries=3)
 def parse_log_file(self, artifact_id: str, case_id: str, device_id: str | None = None):
     """Async task: download artifact, detect format, parse, normalize, index."""
-    import asyncio
-
     async def _run():
         async with async_session_factory() as db:
             try:
@@ -73,6 +98,9 @@ def parse_log_file(self, artifact_id: str, case_id: str, device_id: str | None =
                     artifact_id=artifact_id,
                     events=parsed_events,
                 )
+
+                # Persist normalized events to Postgres (source of truth for the AI engine)
+                await persist_log_events(db, normalized)
 
                 # Index into Elasticsearch
                 index_log_events_bulk(normalized)
@@ -125,4 +153,5 @@ def parse_log_file(self, artifact_id: str, case_id: str, device_id: str | None =
                 )
                 raise self.retry(exc=e)
 
-    asyncio.run(_run())
+    from app.tasks.runner import run_async
+    run_async(_run)
