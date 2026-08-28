@@ -54,22 +54,45 @@ class NetworkGenericParser(BaseParser):
             if isinstance(data, dict):
                 data = [data]
             for item in data:
-                ts = self._extract_timestamp(item)
-                events.append(ParsedEvent(
-                    timestamp=ts,
-                    source_type=self.source_type,
-                    actor=item.get("src_ip") or item.get("source") or item.get("src"),
-                    action=item.get("action") or item.get("event") or "network_event",
-                    object=item.get("dest_ip") or item.get("destination") or item.get("dst"),
-                    ip_address=item.get("src_ip") or item.get("source_ip"),
-                    file_hash=item.get("hash") or item.get("sha256"),
-                    detail=str(item)[:2000],
-                    raw_line=json.dumps(item)[:5000],
-                    extra=item,
-                ))
+                events.extend(self._parse_json_item(item))
         except json.JSONDecodeError:
             return self._parse_plaintext(text)
         return events
+
+    def _parse_json_item(self, item: dict) -> list[ParsedEvent]:
+        # Flatten nested event arrays (timeline_events / events / logs)
+        for nested_key in ("timeline_events", "events", "logs", "entries"):
+            nested = item.get(nested_key)
+            if isinstance(nested, list):
+                return [
+                    ev
+                    for sub in nested
+                    for ev in self._parse_json_item(sub) if isinstance(sub, dict)
+                ]
+        # Handle a plain flat event
+        ts = self._extract_timestamp(item)
+        ip = item.get("ip_address") or item.get("src_ip") or item.get("source_ip") or item.get("dest_ip")
+        action = item.get("action") or item.get("event") or "network_event"
+        file_hash = item.get("hash") or item.get("sha256") or item.get("file_hash")
+        obj = item.get("object") or item.get("dest_ip") or item.get("destination") or item.get("dst")
+        if not obj and "detail" in item:
+            obj = item.get("detail")
+        return [ParsedEvent(
+            timestamp=ts,
+            source_type=self.source_type,
+            actor=item.get("actor")
+            or item.get("source")
+            or item.get("src_ip")
+            or item.get("src")
+            or item.get("device"),
+            action=action,
+            object=obj,
+            ip_address=ip,
+            file_hash=file_hash,
+            detail=item.get("detail") or json.dumps(item)[:2000],
+            raw_line=json.dumps(item)[:5000],
+            extra=item,
+        )]
 
     def _parse_csv(self, text: str) -> list[ParsedEvent]:
         events = []
