@@ -26,7 +26,7 @@ async def search_events(
     timestamp_from: str | None = Query(None, description="Start of time range (ISO 8601)"),
     timestamp_to: str | None = Query(None, description="End of time range (ISO 8601)"),
     from_: int = Query(0, alias="offset", ge=0, description="Offset for pagination"),
-    size: int = Query(50, ge=1, le=200, description="Max results per page"),
+    size: int = Query(50, ge=1, le=1000, description="Max results per page"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_case_access),
 ):
