@@ -61,7 +61,9 @@ jobs:
           alembic current || true
           alembic upgrade head
       - name: Run pytest
-        run: pytest tests/ -v --tb=short
+        run: |
+          pytest tests/ -v --tb=short 2>&1 | tee pytest_output.txt
+          cat pytest_output.txt
 
   frontend-lint:
     runs-on: ubuntu-latest
