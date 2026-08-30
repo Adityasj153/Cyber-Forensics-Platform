@@ -57,7 +57,8 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Diagnose DB connectivity
         run: |
-          python -c "import os, sys, psycopg2; print('Testing DB: ' + os.environ['DATABASE_URL_SYNC'], flush=True); conn = psycopg2.connect(os.environ['DATABASE_URL_SYNC'], connect_timeout=10); print('DB OK, version: ' + str(conn.server_version), flush=True); cur = conn.cursor(); cur.execute('SELECT 1'); print('Query OK: ' + str(cur.fetchone()), flush=True); conn.close(); print('DB DIAGNOSIS COMPLETE', flush=True)"
+          echo "DATABASE_URL_SYNC=$DATABASE_URL_SYNC"
+          python -c "import os, sys, psycopg2; print('Testing DB: ' + os.environ.get('DATABASE_URL_SYNC', 'NOT SET'), flush=True); conn = psycopg2.connect(os.environ['DATABASE_URL_SYNC'], connect_timeout=10); print('DB OK, version: ' + str(conn.server_version), flush=True); cur = conn.cursor(); cur.execute('SELECT 1'); print('Query OK: ' + str(cur.fetchone()), flush=True); conn.close(); print('DB DIAGNOSIS COMPLETE', flush=True)"
       - name: Run alembic with verbose output
         run: |
           echo "=== ALEMBIC INFO ==="
