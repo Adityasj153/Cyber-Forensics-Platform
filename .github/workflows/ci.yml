@@ -56,7 +56,10 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - name: Run alembic migrations
-        run: alembic upgrade head
+        run: |
+          echo "DATABASE_URL_SYNC=$DATABASE_URL_SYNC"
+          alembic current
+          alembic upgrade head
       - name: Run pytest
         run: pytest tests/ -v --tb=short
 
