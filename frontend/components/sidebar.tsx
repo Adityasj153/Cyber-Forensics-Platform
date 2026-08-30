@@ -11,6 +11,7 @@ const SECTION_NAV = [
   { label: "Correlation", href: "/correlation" },
   { label: "Anomalies", href: "/anomalies" },
   { label: "Search", href: "/search" },
+  { label: "NL Query", href: "/nl-query" },
   { label: "Reports", href: "/reports" },
 ];
 

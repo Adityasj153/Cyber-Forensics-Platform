@@ -131,6 +131,25 @@ export const SearchResponseSchema = z.object({
   events: z.array(LogEventSchema),
 });
 
+export const NLQueryFilterParamsSchema = z.object({
+  source_type: z.string().nullable(),
+  action: z.string().nullable(),
+  device_id: z.string().nullable(),
+  ip_address: z.string().nullable(),
+  timestamp_from: z.string().nullable(),
+  timestamp_to: z.string().nullable(),
+  query: z.string().nullable(),
+  offset: z.number(),
+  size: z.number(),
+});
+
+export const NLQueryResponseSchema = z.object({
+  answer: z.string(),
+  cited_event_ids: z.array(z.string()),
+  filters_applied: NLQueryFilterParamsSchema,
+  total_found: z.number(),
+});
+
 // ── Inferred Types ──────────────────────────────────────────────────────────
 
 export type User = z.infer<typeof UserSchema>;
@@ -231,6 +250,18 @@ export const api = {
       sp.set("size", String(params.size ?? 50));
       return request<SearchResponse>(`/api/cases/${caseId}/search?${sp.toString()}`, {}, SearchResponseSchema);
     },
+  },
+
+  nlQuery: {
+    query: (caseId: string, question: string) =>
+      request<z.infer<typeof NLQueryResponseSchema>>(
+        `/api/cases/${caseId}/nl-query/execute`,
+        {
+          method: "POST",
+          body: JSON.stringify({ question }),
+        },
+        NLQueryResponseSchema,
+      ),
   },
 
   anomalies: {
