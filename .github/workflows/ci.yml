@@ -55,8 +55,37 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - run: alembic upgrade head
-      - run: pytest tests/ -v --tb=short
+      - name: Diagnose DB connectivity
+        run: |
+          python -c "
+          import os, sys, psycopg2
+          print('Testing DB connection to: ' + os.environ['DATABASE_URL_SYNC'])
+          try:
+              conn = psycopg2.connect(os.environ['DATABASE_URL_SYNC'], connect_timeout=10)
+              print('DB connection OK, server version: ' + str(conn.server_version))
+              cur = conn.cursor()
+              cur.execute('SELECT 1')
+              print('Query OK: ' + str(cur.fetchone()))
+              conn.close()
+          except Exception as e:
+              print('DB connection FAILED: ' + str(e), file=sys.stderr)
+              import traceback; traceback.print_exc()
+              sys.exit(1)
+          "
+      - name: Run alembic migrations
+        run: |
+          set -o pipefail
+          alembic upgrade head 2>&1 | tee alembic_output.txt
+          ALEMBIC_STATUS=${PIPESTATUS[0]}
+          echo "alembic_exit_status=$ALEMBIC_STATUS" >> alembic_output.txt
+          if [ $ALEMBIC_STATUS -ne 0 ]; then echo "ALEMBIC_FAILED=true" >> alembic_output.txt; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alembic-output
+          path: backend/alembic_output.txt
+      - name: Run pytest
+        run: pytest tests/ -v --tb=short
 
   frontend-lint:
     runs-on: ubuntu-latest
