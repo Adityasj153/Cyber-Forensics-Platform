@@ -270,3 +270,37 @@ class Anomaly(Base):
 
     case = relationship("Case")
     reviewer = relationship("User")
+
+
+class ReportStatus(str, enum.Enum):
+    DRAFT = "draft"
+    APPROVED = "approved"
+
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
+    case_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    format = Column(String(20), nullable=False)  # pdf, csv, json
+    status = Column(
+        Enum(ReportStatus, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=ReportStatus.DRAFT,
+    )
+    title = Column(String(500), nullable=False)
+    content_hash = Column(String(64), nullable=False)
+    content_json = Column(JSON, nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    approved_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    approved_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    case = relationship("Case")
+    creator = relationship("User", foreign_keys=[created_by])
+    approver = relationship("User", foreign_keys=[approved_by])

@@ -150,6 +150,33 @@ export const NLQueryResponseSchema = z.object({
   total_found: z.number(),
 });
 
+export const ReportResponseSchema = z.object({
+  id: z.string(),
+  case_id: z.string(),
+  format: z.string(),
+  status: z.string(),
+  title: z.string(),
+  content_hash: z.string(),
+  created_by: z.string(),
+  approved_by: z.string().nullable(),
+  approved_at: z.string().nullable(),
+  created_at: z.string(),
+});
+
+export const ReportDetailResponseSchema = z.object({
+  id: z.string(),
+  case_id: z.string(),
+  format: z.string(),
+  status: z.string(),
+  title: z.string(),
+  content_hash: z.string(),
+  content_json: z.record(z.unknown()),
+  created_by: z.string(),
+  approved_by: z.string().nullable(),
+  approved_at: z.string().nullable(),
+  created_at: z.string(),
+});
+
 // ── Inferred Types ──────────────────────────────────────────────────────────
 
 export type User = z.infer<typeof UserSchema>;
@@ -262,6 +289,32 @@ export const api = {
         },
         NLQueryResponseSchema,
       ),
+  },
+
+  reports: {
+    list: (caseId: string) =>
+      request<z.infer<typeof ReportResponseSchema>[]>(
+        `/api/cases/${caseId}/reports`,
+        {},
+        z.array(ReportResponseSchema),
+      ),
+    generate: (caseId: string, data: { format: string; title?: string }) =>
+      request<z.infer<typeof ReportDetailResponseSchema>>(
+        `/api/cases/${caseId}/reports/generate`,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        },
+        ReportDetailResponseSchema,
+      ),
+    approve: (caseId: string, reportId: string) =>
+      request<z.infer<typeof ReportResponseSchema>>(
+        `/api/cases/${caseId}/reports/${reportId}/approve`,
+        { method: "PATCH" },
+        ReportResponseSchema,
+      ),
+    downloadUrl: (caseId: string, reportId: string) =>
+      `${API_BASE}/api/cases/${caseId}/reports/${reportId}/download`,
   },
 
   anomalies: {
