@@ -75,15 +75,18 @@ jobs:
       - name: Run alembic migrations
         run: |
           set -o pipefail
-          alembic upgrade head 2>&1 | tee alembic_output.txt
-          ALEMBIC_STATUS=${PIPESTATUS[0]}
-          echo "alembic_exit_status=$ALEMBIC_STATUS" >> alembic_output.txt
-          if [ $ALEMBIC_STATUS -ne 0 ]; then echo "ALEMBIC_FAILED=true" >> alembic_output.txt; fi
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: alembic-output
-          path: backend/alembic_output.txt
+          alembic upgrade head > alembic_output_stdout.txt 2> alembic_output_stderr.txt
+          ALEMBIC_STATUS=$?
+          echo "alembic_exit_status=$ALEMBIC_STATUS" > alembic_result.txt
+          if [ $ALEMBIC_STATUS -ne 0 ]; then
+            echo "ALEMBIC_FAILED=true" >> alembic_result.txt
+            echo "=== ALEMBIC STDERR ===" >> alembic_result.txt
+            cat alembic_output_stderr.txt >> alembic_result.txt
+            echo "" >> alembic_result.txt
+            echo "=== ALEMBIC STDOUT ===" >> alembic_result.txt
+            cat alembic_output_stdout.txt >> alembic_result.txt
+          fi
+          cat alembic_result.txt
       - name: Run pytest
         run: pytest tests/ -v --tb=short
 
