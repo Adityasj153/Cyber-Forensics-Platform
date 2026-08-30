@@ -56,14 +56,9 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - name: Run alembic migrations
-        run: |
-          echo "DATABASE_URL_SYNC=$DATABASE_URL_SYNC"
-          alembic current || true
-          alembic upgrade head
+        run: alembic upgrade head
       - name: Run pytest
-        run: |
-          pytest tests/ -v --tb=short 2>&1 | tee pytest_output.txt
-          cat pytest_output.txt
+        run: pytest tests/ -v --tb=short
 
   frontend-lint:
     runs-on: ubuntu-latest
