@@ -55,27 +55,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - name: Diagnose DB connectivity
-        run: |
-          echo "DATABASE_URL_SYNC=$DATABASE_URL_SYNC"
-          python -c "import os; url=os.environ.get('DATABASE_URL_SYNC','NOT SET'); print(f'URL={url}')"
-          python -c "import os, psycopg2; conn=psycopg2.connect(os.environ['DATABASE_URL_SYNC']); print(f'DB version: {conn.server_version}'); conn.close()"
-      - name: Run alembic with verbose output
-        run: |
-          echo "=== ALEMBIC CURRENT ==="
-          alembic current || true
-          echo ""
-          echo "=== RUNNING ALEMBIC UPGRADE ==="
-          alembic upgrade head --sql 2>&1 | head -100
-          echo ""
-          echo "=== ALEMBIC EXIT ==="
+      - name: Run alembic migrations
+        run: alembic upgrade head
       - name: Run pytest
-        run: |
-          echo "=== RUNNING PYTEST ==="
-          pytest tests/ -v --tb=short 2>&1 | tee pytest_output.txt
-          echo "=== PYTEST OUTPUT ==="
-          cat pytest_output.txt
-          echo "=== PYTEST EXIT ==="
+        run: pytest tests/ -v --tb=short
 
   frontend-lint:
     runs-on: ubuntu-latest
