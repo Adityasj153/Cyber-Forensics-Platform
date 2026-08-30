@@ -70,7 +70,12 @@ jobs:
           echo ""
           echo "=== ALEMBIC EXIT ==="
       - name: Run pytest
-        run: pytest tests/ -v --tb=short
+        run: |
+          echo "=== RUNNING PYTEST ==="
+          pytest tests/ -v --tb=short 2>&1 | tee pytest_output.txt
+          echo "=== PYTEST OUTPUT ==="
+          cat pytest_output.txt
+          echo "=== PYTEST EXIT ==="
 
   frontend-lint:
     runs-on: ubuntu-latest
