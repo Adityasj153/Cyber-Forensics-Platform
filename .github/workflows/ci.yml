@@ -70,7 +70,6 @@ print('DB DIAGNOSIS COMPLETE', flush=True)
 "
       - name: Run alembic with verbose output
         run: |
-          cd backend
           echo "=== Running alembic via Python ==="
           python -c "
 import os
