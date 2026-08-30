@@ -100,7 +100,7 @@ async def nl_query(
 
     try:
         response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-5",
             max_tokens=1024,
             system=SYSTEM_PROMPT,
             messages=[
@@ -196,7 +196,7 @@ async def _call_llm(question: str) -> tuple[FilterParams, str]:
 
     try:
         response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-5",
             max_tokens=1024,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": question}],
