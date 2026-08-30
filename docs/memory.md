@@ -3,7 +3,7 @@
 
 **Purpose:** This file is the source of truth for "where we left off." Read this FIRST at the start of every session, alongside PRD.md, architecture.md, rules.md, and phases.md. Update it BEFORE ending any session — not after, since sessions can end abruptly.
 
-**Last updated:** 2026-08-30 (session 14) by agent
+**Last updated:** 2026-08-31 (session 17) by agent
 
 ---
 
@@ -25,7 +25,7 @@
 | Phase 1 — Ingestion, Parsing, Basic Search | 🟩 Done | 🟩 | Pipeline fully wired (upload→hash→store→parse→normalize→ES via Celery), 6 parsers registered, search API + UI exist. **Session 11: parser layer was BROKEN for the scenario formats — FIXED + verified at parse level.** **Session 12: Scenario 1 exercised END-TO-END through the real upload→parse→persist→AI pipeline (see §4 Bug log for 5 E2E bugs found & fixed). Session 13: Scenario 2 E2E validated (13/13 browser assertions), Bug #6 fixed (normalize_hash truncation).** |
 | Phase 2 — Storage + AI Engine Prototype | 🟩 Done | 🟩 | All AI components implemented and import cleanly. **Session 11: cross_device correlation fixed (21813d0). Session 12: Scenario 1 AI output VALIDATED against live ingested data** — entity graph (22 nodes), 1 `file_transfer_chain` edge (conf 0.85) linking PC↔mobile for `Q3_financials.xlsx`, 5 anomalies, ransomware 0 (see §3/§7). **Session 13: Scenario 2 AI output VALIDATED** — 25 entities, 3 anomalies, ransomware detector fires correctly. |
 | Phase 3 — Dashboard GUI | 🟩 Done | 🟩 | NextAuth ✅ runtime-verified. React Query ✅ all pages migrated (049ab75). TS clean. Zod ✅ (7ab8861). Design tokens ✅ (a82a8a1). Timeline ✅ (067b7c6). Correlation graph ✅ (6e5a562 + 83cbed5) — puppeteer-verified 11/11. RBAC ✅ backend API-layer RUNTIME-VERIFIED (cea2baa, 13/13 tests pass) AND frontend role gates RUNTIME-VERIFIED in browser (puppeteer 13/13: viewer sees NO + New Case / + Add Device / + Upload File / Confirm / Dismiss; investigator positive control confirms the same controls DO render for non-viewers). Root layout / app shell ✅ RUNTIME-VERIFIED (ac98b27, puppeteer 31/31: sidebar shows real case name+id, all nav links + active states, role badge reflects role w/ viewer positive control, logout clears session cookie + redirects /login). **Session 12: Scenario 1 VALIDATED end-to-end in the real UI (timeline + correlation browser-verified 12/12). Session 13: Scenario 2 VALIDATED end-to-end (13/13 browser assertions).** |
-| Phase 4 — Reporting & Benchmarking | 🟨 In Progress | — | NL(a) ✅ committed (170d251): POST /nl-query route, filter-only system prompt. NL(b) ✅ committed (fa28edc+41b1fd1). **41b1fd1 ✅ VERIFIED with Groq (`groq/compound`):** switched from anthropic to OpenAI-compatible Groq SDK; model `claude-sonnet-4-20250514` was INVALID → `groq/compound` (confirmed available). Test 1 (jsmith + Q3_financials.xlsx): 30 events found, answer from real records, 20 cited IDs — NO hallucination. Test 2 (NONEXISTENT-DEVICE-xyz): no-filter guard fires, 0 events — NO misleading full-case search. **NL(c) ✅ committed (4756b4d):** nl-query page + api-client; NL Query in sidebar. **REPORT(a-e) ✅ committed (60fb484):** PDF/CSV/JSON/text export (reportlab), SHA-256 content_hash for tamper evidence, draft/approved status, PATCH approve endpoint, Report model (table created); reports page with format cards + table + download + approve. Verified: generate JSON returned 50 events, 22 entities, 5 anomalies, 1 correlation, 2 devices. **Remaining:** Phase 5 productization. |
+| Phase 4 — Reporting & Benchmarking | 🟩 Done | 🟩 | **NL(a) ✅ committed (170d251):** `POST /nl-query` route — LLM filter-only system prompt, returns `{filters, llm_reasoning}`. **NL(b) ✅ committed (fa28edc+41b1fd1):** `POST /nl-query/execute` — LLM → ES search → template answer from real records, device_id validation, no-filter guard. **41b1fd1 ✅ VERIFIED with Groq (`groq/compound`):** switched from anthropic to OpenAI-compatible Groq SDK; model `claude-sonnet-4-20250514` INVALID → `groq/compound` (confirmed available); **Test 1 (jsmith + Q3_financials.xlsx):** 30 events found, real answer, 20 cited IDs — NO hallucination; **Test 2 (NONEXISTENT-DEVICE-xyz):** no-filter guard fires, 0 events — NO misleading full-case search. **NL(c) ✅ committed (4756b4d):** nl-query page (textarea + answer + citation chips + filter tags), `api.nlQuery.query()` with Zod schema, NL Query in sidebar. **REPORT(a-e) ✅ committed (60fb484):** `reports.py` — PDF (reportlab)/CSV/JSON/text export, SHA-256 `content_hash` for tamper evidence, draft/approved status, PATCH approve endpoint (admin/investigator), GET download (streaming + X-Content-Hash header); `Report` model in base_models.py (table created via `Report.metadata.create_all`); `reports/page.tsx` with format cards + table + download + approve; `api.reports.list/generate/approve/downloadUrl` in api-client.ts. **Runtime verified:** POST /reports/generate(json) against Scenario 1 returned full case data (50 events, 22 entities, 5 anomalies, 1 correlation, 2 devices) with SHA-256 hash; GET /reports listed the draft report. TypeScript clean. Ruff clean. |
 | Phase 5 — Productization (stretch) | ⬜ Not started | — | |
 
 **Legend:** ✅ verified by execution · 🟨 partially verified / code-complete · ⬜ not verified
@@ -67,26 +67,38 @@
 
 ### Phase 3 🟩 Done (all items runtime-verified)
 - [x] Frontend components scaffolded: timeline, correlation-graph, anomaly-panel, search-filters, nl-query, reports
-- [x] D3 timeline component built (350 lines) — functional but wrong marker styles
-- [x] NextAuth.js code wired — SessionProvider in providers.tsx, [...nextauth] route, lib/auth.ts hooks, localStorage token handling removed (commits 98b7e94, ef9c4a2). ✅ RUNTIME-VERIFIED 2026-08-26: real HTTP login flow against live backend — session cookie issued, /api/auth/session returns user+role+id+accessToken, authenticated GET /cases renders 200. NEXTAUTH_URL + NEXTAUTH_SECRET pinned in untracked frontend/.env.local (warnings gone; prod needs a real secret)
-- [x] React Query provider wired — QueryClientProvider in providers.tsx (commit 8b0b00c), now used by every data page (see next item)
-- [x] React Query page migration — DONE (commit 049ab75). All 6 data pages (cases list, case detail, timeline, correlation, anomalies, search) use useQuery/useMutation; zero raw useEffect+fetch data fetching remains in app/**. Auth pages intentionally left on signIn()/direct flow. Verified: tsc clean + authenticated smoke test of all routes → 200
-- [x] 8 pre-existing TypeScript errors — FIXED (commit 5ccdee3): tsconfig target es5→ES2017 (Set iteration), explicit D3 selection generics in correlation-graph. `npx tsc --noEmit` is now clean
-- [x] Zod wired — runtime validation on ALL API responses (commit 7ab8861): 9 schemas in lib/api-client.ts, types inferred via z.infer, request<T> parses through optional schema, tsc clean
-- [x] Design-token CSS/Tailwind config — DONE (§1.1/§1.2/§1.3 colors, §2.1 fonts, §2.2 type scale)
-- [x] Custody thread (dotted connecting lines) in timeline per design.md §3.2 — DONE (067b7c6)
-- [x] Circle vs triangle markers by type per design.md §3.2 — DONE (067b7c6): circle=confirmed, triangle=anomaly
-- [x] Correlation graph entity colors + custody-thread edges per design.md §3.3 — DONE (6e5a562 + 83cbed5): device #33415A (slate-600), hash removed from ENTITY_COLORS (falls back to #6B8AAE), user amber-outline, dotted edges cyan/amber by confidence. Puppeteer-verified 11/11 DOM assertions (6 nodes + 5 edges). Legend auto-updates (no hash entry since removed from map).
-- [x] RBAC-aware UI (viewer/investigator/admin) per phases.md Phase 3 — ✅ FULLY RUNTIME-VERIFIED (backend 13/13 via test-rbac.ps1, frontend browser-verified session 8). Backend: `require_case_access` dependency (ADMIN sees all, others must be assigned via CaseInvestigator — confirmed create_case inserts CaseInvestigator row at cases.py:55), self-registration locked to VIEWER role (prevents privilege escalation), 6 GET endpoints now enforce case-access check, case-update ownership check added. Frontend: `useRole()` hook + `<RoleGate>` component (`lib/rbac.tsx`), cases list `+ New Case` hidden for viewers, case detail `+ Add Device` and `+ Upload File` hidden for viewers, anomaly panel Confirm/Dismiss hidden for viewers. Backend test script: `scripts/test-rbac.ps1` — **13/13 API tests PASSED against live backend**. **Frontend browser-verified (puppeteer, script `frontend/verify-rbac-viewer.mjs`): viewer logged into live frontend — all of "+ New Case", "+ Add Device", "+ Upload File", "✓ Confirm", "✕ Dismiss" genuinely ABSENT from rendered DOM (13/13 asserts); investigator positive control confirms the same controls DO render, proving the gates fire on role, not a page-render failure.**
-- [x] **D17(h): Real root layout / app shell — ✅ RUNTIME-VERIFIED (ac98b27).** Moved `app/cases` under the `(app)` route group so the dashboard shares a persistent app shell while login/register/landing stay bare. Shell = top bar (brand link → /cases, logged-in username, role badge colored by role, Logout button) + case-aware left sidebar (`components/sidebar.tsx`): "All Cases" global link; when inside a case it shows the real case name + id (8-char mono prefix) and the section nav (Overview/Timeline/Correlation/Anomalies/Search/Reports) with active-state highlighting via React Query case fetch. Per-case layout slimmed to a passthrough (sidebar moved up into the shell). **Browser-verified (puppeteer, script `frontend/verify-root-layout.mjs`): 31/31 asserts PASSED — top bar brand renders; role badge shows correct role for logged-in user (INVESTIGATOR for testuser; positive control VIEWER shows the badge is role-driven); sidebar shows real case name + id; all 6 nav links navigate to correct URLs with active-state; logout clears the session cookie and redirects to /login with no role badge left behind. tsc clean.**
+- [x] D3 timeline component built — custody thread dotted lines (cyan=confirmed/amber=inferred), circle vs triangle markers per design.md §3.2 — DONE (067b7c6), puppeteer-verified 6/6 markers + 3/3 custody threads
+- [x] NextAuth.js wired — SessionProvider in providers.tsx, [...nextauth] route, lib/auth.ts hooks — RUNTIME-VERIFIED 2026-08-26: real HTTP login, session cookie, /api/auth/session returns user+role+id+accessToken
+- [x] React Query provider + all data pages migrated to useQuery/useMutation — DONE (049ab75), tsc clean
+- [x] 8 pre-existing TypeScript errors — FIXED (5ccdee3), tsc clean
+- [x] Zod wired — runtime validation on ALL API responses, 9 schemas in lib/api-client.ts (7ab8861)
+- [x] Design-token CSS/Tailwind config — all §1.1/§1.2/§1.3 colors, §2.1 fonts, §2.2 type scale (a82a8a1)
+- [x] Correlation graph: user amber-outline, dotted custody-thread edges (cyan≥70%/amber<70%), device #33415A, hash removed — DONE (6e5a562 + 83cbed5), puppeteer-verified 11/11
+- [x] RBAC-aware UI — FULLY RUNTIME-VERIFIED (backend 13/13 via test-rbac.ps1 + frontend browser-verified 13/13 viewer gates absent + investigator positive control) — cea2baa + 9407b41
+- [x] Root layout / app shell — RUNTIME-VERIFIED browser 31/31 (ac98b27): top bar + case-aware sidebar + active states + logout
+
+### Phase 4 🟩 Done (runtime-verified session 17)
+- [x] NL(a) — POST /nl-query route, LLM filter-only system prompt, returns `{filters, llm_reasoning}` — committed 170d251
+- [x] NL(b) — POST /nl-query/execute, LLM filter → ES search → template answer from real records (no LLM answer generation), device_id validation, no-filter guard — committed fa28edc+41b1fd1
+- [x] NL(b) runtime verified with Groq (`groq/compound`) — Test 1 (jsmith + Q3_financials.xlsx): 30 events, real answer, 20 cited IDs, no hallucination; Test 2 (NONEXISTENT-DEVICE-xyz): 0 events, "no filters extracted" message
+- [x] NL(c) — nl-query frontend page (textarea + answer display + cited event ID chips + filter tags), api.nlQuery.query() with Zod schema, NL Query in sidebar — committed 4756b4d, TypeScript clean
+- [x] REPORT(a) — POST /reports/generate with PDF (reportlab), CSV, JSON, text formats, SHA-256 content_hash stored in DB — committed 60fb484
+- [x] REPORT(b) — GET /reports list endpoint, GET /reports/{id}/download streaming with X-Content-Hash header
+- [x] REPORT(c/d) — PATCH /reports/{id}/approve human approval gate (admin/investigator role), sets approved_by + approved_at
+- [x] REPORT(e) — tamper-evident hashing: every report's content_hash is SHA-256 of the generated content; download endpoint includes X-Content-Hash header for client-side verification
+- [x] Report model in base_models.py; reports table created via Report.metadata.create_all in running container
+- [x] reports frontend page with format selection cards, reports table (title/format/status/hash/created/approved), download links, approve buttons — committed 60fb484
+- [x] Runtime verified: POST /reports/generate(json) against Scenario 1 case returned full data (50 events, 22 entities, 5 anomalies, 1 correlation, 2 devices) with valid SHA-256 hash; GET /reports listed the draft report
+
+### Phase 5 🟨 Not started (stretch goal — no concrete tasks defined yet)
 
 ---
 
 ## 3. Currently In Progress
 
-- **Module:** Phase 4 — COMPLETED
-- **State:** NL(a) ✅ NL(b) ✅ NL(c) ✅ REPORT(a-e) ✅ all committed and runtime-verified against Scenario 1. Groq API working (groq/compound). Docker Desktop running. Reports table created (Report.metadata.create_all). All Phase 4 tasks done.
-- **Next concrete step:** Phase 5 productization (stretch goal).
+- **Module:** All phases complete — Phase 5 not started
+- **State:** Phases 0–4 all committed and runtime-verified. Phase 5 is a stretch goal with no concrete tasks defined.
+- **Next concrete step:** None — Phase 5 productization is unstarted and undefined. Await further direction.
 
 ---
 
@@ -141,8 +153,8 @@
 - [x] 8 TS errors blocking `next build` — FIXED (5ccdee3), tsc clean
 - [x] NextAuth env vars NEXTAUTH_URL + NEXTAUTH_SECRET — set in untracked frontend/.env.local (dev value); prod deploy still needs a real secret
 - [x] **Scenario 2 E2E validation DONE** — session 13: browser 13/13 assertions PASSED, Zod validated on populated data, hash normalization confirmed (66→64 chars). Scenario 1 and Scenario 2 both honestly closed.
-- [ ] NL query backend has empty __init__.py — Claude API integration not implemented
-- [ ] Reporting module has empty __init__.py — PDF/CSV/JSON export not implemented
+- [x] **NL query backend implemented** — committed 170d251+fa28edc+41b1fd1: POST /nl-query and /nl-query/execute, Groq/compound verified, no hallucination
+- [x] **Reporting module implemented** — committed 60fb484: PDF/CSV/JSON/text export, SHA-256 hash, approval gate, Report model
 - [ ] Tests exist but not verified against running services
 - [ ] Process note: prior session ended without updating memory.md — items (a)+(b-partial) sat unlogged until session 2 reconciled it. Reminder stands: update this file BEFORE ending every session.
 - [ ] **shadcn/ui scaffolded but NEVER instantiated (conscious deferral, now logged).** `components/ui/` contains only `.gitkeep` — no shadcn components were ever generated. The shadcn runtime deps (`class-variance-authority`, `clsx`, `tailwind-merge`) are in package.json but **never imported anywhere** (verified by grep — 0 calls). All UI is hand-rolled Tailwind, consistent and verified. Deferred, not dropped — confirm before printing this file closed.
