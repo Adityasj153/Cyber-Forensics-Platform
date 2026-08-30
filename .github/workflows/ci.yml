@@ -70,15 +70,25 @@ print('DB DIAGNOSIS COMPLETE', flush=True)
 "
       - name: Run alembic with verbose output
         run: |
-          echo "=== ALEMBIC INFO ==="
-          alembic info
-          echo ""
-          echo "=== ALEMBIC CURRENT ==="
-          alembic current
-          echo ""
-          echo "=== ALEMBIC UPGRADE HEAD ==="
-          alembic upgrade head
-          echo ""
+          cd backend
+          echo "=== Running alembic via Python ==="
+          python -c "
+import os
+import sys
+print('DATABASE_URL_SYNC:', os.environ.get('DATABASE_URL_SYNC'), flush=True)
+from alembic import command
+from alembic.config import Config
+cfg = Config('alembic.ini')
+cfg.set_main_option('sqlalchemy.url', os.environ.get('DATABASE_URL_SYNC'))
+print('Config loaded, running upgrade...', flush=True)
+try:
+    command.upgrade(cfg, 'head')
+    print('Upgrade SUCCESS', flush=True)
+except Exception as e:
+    print('Upgrade FAILED:', str(e), flush=True)
+    import traceback; traceback.print_exc(file=sys.stdout)
+    sys.exit(1)
+"
           echo "=== ALEMBIC EXIT ==="
       - name: Run pytest
         run: pytest tests/ -v --tb=short
