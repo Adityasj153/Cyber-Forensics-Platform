@@ -1,4 +1,5 @@
 import structlog
+
 from app.ingestion.parsers.base import BaseParser, ParsedEvent
 
 logger = structlog.get_logger()
@@ -8,7 +9,11 @@ _registry: list[BaseParser] = []
 
 def register_parser(parser: BaseParser) -> None:
     _registry.append(parser)
-    logger.info("parser_registered", source_type=parser.source_type, parser=type(parser).__name__)
+    logger.info(
+        "parser_registered",
+        source_type=parser.source_type,
+        parser=type(parser).__name__,
+    )
 
 
 def get_all_parsers() -> list[BaseParser]:

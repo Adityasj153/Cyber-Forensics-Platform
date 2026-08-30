@@ -1,0 +1,55 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+  "I",    # isort
+  "F",    # pyflakes
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "UP",   # pyupgrade
+  "PL",   # pylint
+  "PERF", # perf
+]
+ignore = [
+  "PLR0912",  # too many branches
+  "PLR0911",  # too many return statements
+  "PLR0913",  # too many arguments
+  "PLR0915",  # too many statements
+  "PLR0917",  # too many positional arguments
+  "PLR2004",  # magic value comparison
+  "UP017",    # datetime.UTC alias — style preference
+  "UP035",    # Sequence from collections.abc — style preference
+  "UP042",    # enum.StrEnum — would change existing enums
+  "E501",     # line too long
+  "PLW2901",  # for loop variable overwritten
+  "PERF102",  # use .values() instead of .items()
+]
+
+[tool.ruff.lint.per-file-ignores]
+"app/api/**/*.py" = [
+  "B008",  # Depends in function defaults — FastAPI standard pattern
+]
+"app/ingestion/parsers/*.py" = [
+  "BLE001",  # blind except — intentional for parsing robustness
+  "DTZ007",  # naive datetime strptime — tz added immediately after
+  "S110",    # try-except-pass — intentional for graceful degradation
+  "PLR0911", # too many return statements
+  "PLR0913", # too many arguments
+]
+"**/migrations/*.py" = [
+  "UP007",  # Union[str, None] in alembic migrations
+]
+"app/tasks/*.py" = [
+  "G201",   # logger.error with exc_info — style preference
+  "PLC0415", # import not at top-level — lazy imports intentional in celery tasks
+]
+"app/**/*.py" = [
+  "G201",  # logger.error with exc_info — style preference
+]
+"tests/**/*.py" = [
+  "E501",     # line too long in test fixtures
+  "PLC0415",  # import not at top-level
+  "PLR2004",  # magic values in test assertions
+]

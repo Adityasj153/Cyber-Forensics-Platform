@@ -1,10 +1,9 @@
-import structlog
 import networkx as nx
-from datetime import datetime
+import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models.base_models import LogEvent, Entity
+from app.db.models.base_models import Entity, LogEvent
 
 logger = structlog.get_logger()
 
@@ -91,11 +90,26 @@ async def build_entity_graph(case_id: str, db: AsyncSession) -> nx.Graph:
         if event.device_id:
             dev_key = f"device:{event.device_id}"
             if event.actor:
-                graph.add_edge(dev_key, f"actor:{event.actor}", relation="actor_on_device", weight=0.8)
+                graph.add_edge(
+                    dev_key,
+                    f"actor:{event.actor}",
+                    relation="actor_on_device",
+                    weight=0.8,
+                )
             if event.ip_address:
-                graph.add_edge(dev_key, f"ip:{event.ip_address}", relation="network_activity", weight=0.7)
+                graph.add_edge(
+                    dev_key,
+                    f"ip:{event.ip_address}",
+                    relation="network_activity",
+                    weight=0.7,
+                )
             if event.object and _looks_like_filename(event.object):
-                graph.add_edge(dev_key, f"file:{event.object}", relation="file_on_device", weight=0.9)
+                graph.add_edge(
+                    dev_key,
+                    f"file:{event.object}",
+                    relation="file_on_device",
+                    weight=0.9,
+                )
 
     logger.info(
         "entity_graph_built",
@@ -111,7 +125,18 @@ async def build_entity_graph(case_id: str, db: AsyncSession) -> nx.Graph:
 def _looks_like_filename(value: str) -> bool:
     if not value or len(value) > 500:
         return False
-    extensions = (".xlsx", ".docx", ".pdf", ".exe", ".zip", ".txt", ".jpg", ".png", ".csv", ".locked")
+    extensions = (
+        ".xlsx",
+        ".docx",
+        ".pdf",
+        ".exe",
+        ".zip",
+        ".txt",
+        ".jpg",
+        ".png",
+        ".csv",
+        ".locked",
+    )
     lower = value.lower()
     return any(lower.endswith(ext) for ext in extensions)
 
@@ -123,7 +148,10 @@ async def persist_entities(case_id: str, entities: dict, db: AsyncSession) -> li
             case_id=case_id,
             entity_type=data["type"],
             value=data["value"],
-            entity_metadata={"event_count": len(data["events"]), "event_ids": data["events"][:50]},
+            entity_metadata={
+                "event_count": len(data["events"]),
+                "event_ids": data["events"][:50],
+            },
         )
         db.add(entity)
         persisted.append(entity)

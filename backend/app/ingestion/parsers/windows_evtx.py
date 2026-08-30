@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
 import re
+from datetime import datetime, timezone
 
 from app.ingestion.parsers.base import BaseParser, ParsedEvent
 
@@ -32,9 +32,7 @@ class WindowsEVTXParser(BaseParser):
             return True
         try:
             text = data.decode("utf-8", errors="replace")
-            return any(
-                self._HEADER_PATTERN.match(l.strip()) for l in text.splitlines()[:20]
-            )
+            return any(self._HEADER_PATTERN.match(line.strip()) for line in text.splitlines()[:20])
         except Exception:
             return False
 
@@ -54,13 +52,15 @@ class WindowsEVTXParser(BaseParser):
                 events.append(parsed)
 
         if not events and text.strip():
-            events.append(ParsedEvent(
-                timestamp=datetime.now(timezone.utc),
-                source_type=self.source_type,
-                action="log_entry",
-                detail=text.strip()[:2000],
-                raw_line=text.strip()[:5000],
-            ))
+            events.append(
+                ParsedEvent(
+                    timestamp=datetime.now(timezone.utc),
+                    source_type=self.source_type,
+                    action="log_entry",
+                    detail=text.strip()[:2000],
+                    raw_line=text.strip()[:5000],
+                )
+            )
 
         return events
 
@@ -125,7 +125,9 @@ class WindowsEVTXParser(BaseParser):
     @staticmethod
     def _classify_action(lower_msg: str, source: str) -> str:
         lower_src = source.lower()
-        if "email" in lower_src and ("sent" in lower_msg or "attach" in lower_msg or "upload" in lower_msg):
+        if "email" in lower_src and (
+            "sent" in lower_msg or "attach" in lower_msg or "upload" in lower_msg
+        ):
             return "email_sent"
         if "bluetooth" in lower_src or "bluetooth" in lower_msg:
             return "bluetooth_transfer"
@@ -139,7 +141,9 @@ class WindowsEVTXParser(BaseParser):
             return "file_create"
         if "file" in lower_msg and ("delet" in lower_msg or "remov" in lower_msg):
             return "file_delete"
-        if "process created" in lower_msg or ("process" in lower_msg and ("start" in lower_msg or "creat" in lower_msg)):
+        if "process created" in lower_msg or (
+            "process" in lower_msg and ("start" in lower_msg or "creat" in lower_msg)
+        ):
             return "process_start"
         if "download" in lower_msg:
             return "download_complete"

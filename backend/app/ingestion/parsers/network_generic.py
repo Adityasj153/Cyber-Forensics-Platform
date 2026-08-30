@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
 import csv
 import io
 import json
 import re
+from datetime import datetime, timezone
 
 from app.ingestion.parsers.base import BaseParser, ParsedEvent
 
@@ -29,7 +29,18 @@ class NetworkGenericParser(BaseParser):
 
     def detect(self, filename: str, data: bytes) -> bool:
         lower = filename.lower()
-        if any(ext in lower for ext in [".csv", ".json", ".log", ".pcap", ".firewall", ".isp", ".network"]):
+        if any(
+            ext in lower
+            for ext in [
+                ".csv",
+                ".json",
+                ".log",
+                ".pcap",
+                ".firewall",
+                ".isp",
+                ".network",
+            ]
+        ):
             return True
         try:
             text = data.decode("utf-8", errors="replace")
@@ -79,50 +90,62 @@ class NetworkGenericParser(BaseParser):
                 return [
                     ev
                     for sub in nested
-                    for ev in self._parse_json_item(sub) if isinstance(sub, dict)
+                    for ev in self._parse_json_item(sub)
+                    if isinstance(sub, dict)
                 ]
         # Handle a plain flat event
         ts = self._extract_timestamp(item)
-        ip = item.get("ip_address") or item.get("src_ip") or item.get("source_ip") or item.get("dest_ip")
+        ip = (
+            item.get("ip_address")
+            or item.get("src_ip")
+            or item.get("source_ip")
+            or item.get("dest_ip")
+        )
         action = item.get("action") or item.get("event") or "network_event"
         file_hash = item.get("hash") or item.get("sha256") or item.get("file_hash")
-        obj = item.get("object") or item.get("dest_ip") or item.get("destination") or item.get("dst")
+        obj = (
+            item.get("object") or item.get("dest_ip") or item.get("destination") or item.get("dst")
+        )
         if not obj and "detail" in item:
             obj = item.get("detail")
-        return [ParsedEvent(
-            timestamp=ts,
-            source_type=self.source_type,
-            actor=item.get("actor")
-            or item.get("source")
-            or item.get("src_ip")
-            or item.get("src")
-            or item.get("device"),
-            action=action,
-            object=obj,
-            ip_address=ip,
-            file_hash=normalize_hash(file_hash),
-            detail=item.get("detail") or json.dumps(item)[:2000],
-            raw_line=json.dumps(item)[:5000],
-            extra=item,
-        )]
+        return [
+            ParsedEvent(
+                timestamp=ts,
+                source_type=self.source_type,
+                actor=item.get("actor")
+                or item.get("source")
+                or item.get("src_ip")
+                or item.get("src")
+                or item.get("device"),
+                action=action,
+                object=obj,
+                ip_address=ip,
+                file_hash=normalize_hash(file_hash),
+                detail=item.get("detail") or json.dumps(item)[:2000],
+                raw_line=json.dumps(item)[:5000],
+                extra=item,
+            )
+        ]
 
     def _parse_csv(self, text: str) -> list[ParsedEvent]:
         events = []
         reader = csv.DictReader(io.StringIO(text))
         for row in reader:
             ts = self._extract_timestamp(row)
-            events.append(ParsedEvent(
-                timestamp=ts,
-                source_type=self.source_type,
-                actor=row.get("src_ip") or row.get("source") or row.get("src"),
-                action=row.get("action") or row.get("event") or "network_event",
-                object=row.get("dest_ip") or row.get("destination") or row.get("dst"),
-                ip_address=row.get("src_ip") or row.get("source_ip"),
-                file_hash=normalize_hash(row.get("hash") or row.get("sha256")),
-                detail=str(dict(row))[:2000],
-                raw_line=str(dict(row))[:5000],
-                extra=dict(row),
-            ))
+            events.append(
+                ParsedEvent(
+                    timestamp=ts,
+                    source_type=self.source_type,
+                    actor=row.get("src_ip") or row.get("source") or row.get("src"),
+                    action=row.get("action") or row.get("event") or "network_event",
+                    object=row.get("dest_ip") or row.get("destination") or row.get("dst"),
+                    ip_address=row.get("src_ip") or row.get("source_ip"),
+                    file_hash=normalize_hash(row.get("hash") or row.get("sha256")),
+                    detail=str(dict(row))[:2000],
+                    raw_line=str(dict(row))[:5000],
+                    extra=dict(row),
+                )
+            )
         return events
 
     def _parse_plaintext(self, text: str) -> list[ParsedEvent]:
@@ -154,16 +177,18 @@ class NetworkGenericParser(BaseParser):
             elif "dns" in lower_line:
                 action = "dns_query"
 
-            events.append(ParsedEvent(
-                timestamp=ts,
-                source_type=self.source_type,
-                actor=ips[0] if ips else None,
-                action=action,
-                object=ips[1] if len(ips) > 1 else None,
-                ip_address=ips[0] if ips else None,
-                detail=line[:2000],
-                raw_line=line[:5000],
-            ))
+            events.append(
+                ParsedEvent(
+                    timestamp=ts,
+                    source_type=self.source_type,
+                    actor=ips[0] if ips else None,
+                    action=action,
+                    object=ips[1] if len(ips) > 1 else None,
+                    ip_address=ips[0] if ips else None,
+                    detail=line[:2000],
+                    raw_line=line[:5000],
+                )
+            )
 
         return events
 

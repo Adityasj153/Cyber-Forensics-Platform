@@ -4,7 +4,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, cases, health, logs, search, anomalies
+from app.api.routes import anomalies, auth, cases, health, logs, search
 from app.core.config import get_settings
 
 settings = get_settings()

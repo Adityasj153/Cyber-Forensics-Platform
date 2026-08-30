@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
 import re
+from datetime import datetime, timezone
 
 from app.ingestion.parsers.base import BaseParser, ParsedEvent
 
@@ -27,7 +27,10 @@ class AndroidUSBBTParser(BaseParser):
         try:
             text = data.decode("utf-8", errors="replace")
             first_lines = text[:500]
-            return bool(self._USB_FILE_PATTERN.search(first_lines) or self._BT_FILE_PATTERN.search(first_lines))
+            return bool(
+                self._USB_FILE_PATTERN.search(first_lines)
+                or self._BT_FILE_PATTERN.search(first_lines)
+            )
         except Exception:
             return False
 
@@ -77,13 +80,15 @@ class AndroidUSBBTParser(BaseParser):
             else:
                 ts = datetime.now(timezone.utc)
 
-            events.append(ParsedEvent(
-                timestamp=ts,
-                source_type=self.source_type,
-                action=action,
-                object=filename_obj,
-                detail=detail[:2000],
-                raw_line=line[:5000],
-            ))
+            events.append(
+                ParsedEvent(
+                    timestamp=ts,
+                    source_type=self.source_type,
+                    action=action,
+                    object=filename_obj,
+                    detail=detail[:2000],
+                    raw_line=line[:5000],
+                )
+            )
 
         return events

@@ -1,6 +1,5 @@
 """Test the AI engine components against synthetic scenario data."""
-import pytest
-import numpy as np
+
 from app.ai_engine.explainability.shap_explainer import (
     explain_anomaly,
     explain_correlation,
@@ -11,7 +10,13 @@ from app.ai_engine.explainability.shap_explainer import (
 def test_explain_anomaly():
     explanation = explain_anomaly(
         model_name="isolation_forest",
-        feature_names=["hour_of_day", "is_weekend", "action_risk_score", "has_ip", "has_file_hash"],
+        feature_names=[
+            "hour_of_day",
+            "is_weekend",
+            "action_risk_score",
+            "has_ip",
+            "has_file_hash",
+        ],
         feature_values=[0.8, 0.0, 0.9, 1.0, 1.0],
         score=0.85,
         threshold=0.6,

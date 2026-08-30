@@ -42,6 +42,7 @@ def require_role(*allowed_roles: UserRole):
                 detail=f"Role '{current_user.role.value}' not authorized for this action",
             )
         return current_user
+
     return role_checker
 
 

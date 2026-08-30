@@ -4,14 +4,8 @@ These mirror the exact formats of datasets/synthetic/*.txt so the parser
 fixes (Windows EVTX text routing, Android logcat hash/filename extraction,
 network JSON timeline flattening) are locked in.
 """
+
 from app.ingestion.registry import detect_format, parse_file
-
-from app.ingestion.parsers.windows_evtx import WindowsEVTXParser
-from app.ingestion.parsers.android_logcat import AndroidLogcatParser
-from app.ingestion.parsers.network_generic import NetworkGenericParser
-
-import app.tasks.ingestion_tasks  # registers all parsers
-
 
 PC_INSIDER = """\
 8/20/2026 9:14:00 AM | INFO | 4688 | Security | File "Q3_financials.xlsx" copied to USB device SanDisk Ultra

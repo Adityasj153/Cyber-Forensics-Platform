@@ -1,11 +1,11 @@
+from datetime import datetime
+
 import structlog
-from datetime import datetime, timezone
-from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models.base_models import LogEvent, Anomaly
 from app.ai_engine.explainability.shap_explainer import explain_ransomware_detection
+from app.db.models.base_models import Anomaly, LogEvent
 
 logger = structlog.get_logger()
 
@@ -45,14 +45,16 @@ async def detect_ransomware_timeline(case_id: str, db: AsyncSession) -> list[dic
     for event in events:
         indicators = _check_ransomware_indicators(event)
         if indicators:
-            timeline_events.append({
-                "event_id": str(event.id),
-                "timestamp": event.timestamp.isoformat() if event.timestamp else None,
-                "action": event.action,
-                "object": event.object,
-                "indicators": indicators,
-                "severity_weight": max(SEVERITY_WEIGHTS.get(ind, 0.5) for ind in indicators),
-            })
+            timeline_events.append(
+                {
+                    "event_id": str(event.id),
+                    "timestamp": event.timestamp.isoformat() if event.timestamp else None,
+                    "action": event.action,
+                    "object": event.object,
+                    "indicators": indicators,
+                    "severity_weight": max(SEVERITY_WEIGHTS.get(ind, 0.5) for ind in indicators),
+                }
+            )
 
     if not timeline_events:
         return []
@@ -131,7 +133,9 @@ def _check_ransomware_indicators(event: LogEvent) -> list[str]:
     if "tor" in combined or "onion" in combined or "bitcoin" in combined:
         indicators.append("network_c2")
 
-    if "process" in lower_action and any(word in combined for word in ["encrypt", "cipher", "lock"]):
+    if "process" in lower_action and any(
+        word in combined for word in ["encrypt", "cipher", "lock"]
+    ):
         indicators.append("suspicious_file_write")
 
     return indicators

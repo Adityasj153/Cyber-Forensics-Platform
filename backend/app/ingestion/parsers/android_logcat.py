@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
 import os
 import re
+from datetime import datetime, timezone
 
 from app.ingestion.parsers.base import BaseParser, ParsedEvent
 
@@ -59,17 +59,20 @@ class AndroidLogcatParser(BaseParser):
             if filename:
                 last_filename = filename
 
-            events.append(ParsedEvent(
-                timestamp=ts,
-                source_type=self.source_type,
-                actor=f"pid:{pid}/tag:{tag}",
-                action=action,
-                object=obj or filename,                ip_address=ip_address,
-                file_hash=file_hash,
-                detail=message[:2000],
-                raw_line=line[:5000],
-                extra={"level": level, "pid": pid, "tid": tid, "tag": tag},
-            ))
+            events.append(
+                ParsedEvent(
+                    timestamp=ts,
+                    source_type=self.source_type,
+                    actor=f"pid:{pid}/tag:{tag}",
+                    action=action,
+                    object=obj or filename,
+                    ip_address=ip_address,
+                    file_hash=file_hash,
+                    detail=message[:2000],
+                    raw_line=line[:5000],
+                    extra={"level": level, "pid": pid, "tid": tid, "tag": tag},
+                )
+            )
 
         return events
 
@@ -116,7 +119,12 @@ class AndroidLogcatParser(BaseParser):
             return "usb_event", None, None, file_hash, ip_address
         if "bluetooth" in lower_tag or "bt" in lower_tag or "bluetooth" in lower_msg:
             return "bluetooth_event", None, None, file_hash, ip_address
-        if "wifi" in lower_tag or "wlan" in lower_msg or "network" in lower_tag or "connectivity" in lower_tag:
+        if (
+            "wifi" in lower_tag
+            or "wlan" in lower_msg
+            or "network" in lower_tag
+            or "connectivity" in lower_tag
+        ):
             return "network_event", None, None, file_hash, ip_address
         if "install" in lower_msg or "package" in lower_tag:
             return "app_install", None, None, file_hash, ip_address

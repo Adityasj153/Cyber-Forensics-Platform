@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from email import message_from_string
-import re
 
 from app.ingestion.parsers.base import BaseParser, ParsedEvent
 
@@ -14,7 +13,11 @@ class EmailHeadersParser(BaseParser):
             return True
         try:
             text = data.decode("utf-8", errors="replace")
-            if text.startswith("From:") or text.startswith("Received:") or "MIME-Version:" in text[:500]:
+            if (
+                text.startswith("From:")
+                or text.startswith("Received:")
+                or "MIME-Version:" in text[:500]
+            ):
                 return True
         except Exception:
             return False
@@ -33,7 +36,8 @@ class EmailHeadersParser(BaseParser):
         ts = datetime.now(timezone.utc)
         if date_str:
             try:
-                from email.utils import parsedate_to_datetime
+                from email.utils import parsedate_to_datetime  # noqa: PLC0415
+
                 ts = parsedate_to_datetime(date_str)
                 if ts.tzinfo is None:
                     ts = ts.replace(tzinfo=timezone.utc)
@@ -57,25 +61,27 @@ class EmailHeadersParser(BaseParser):
         if attachments:
             detail += f" [Attachments: {', '.join(attachments)}]"
 
-        events.append(ParsedEvent(
-            timestamp=ts,
-            source_type=self.source_type,
-            actor=from_addr,
-            action="email_sent",
-            object=subject[:500],
-            detail=detail[:2000],
-            raw_line=text[:5000],
-            extra={
-                "from": from_addr,
-                "to": to_addr,
-                "subject": subject,
-                "attachments": attachments,
-            },
-        ))
+        events.append(
+            ParsedEvent(
+                timestamp=ts,
+                source_type=self.source_type,
+                actor=from_addr,
+                action="email_sent",
+                object=subject[:500],
+                detail=detail[:2000],
+                raw_line=text[:5000],
+                extra={
+                    "from": from_addr,
+                    "to": to_addr,
+                    "subject": subject,
+                    "attachments": attachments,
+                },
+            )
+        )
 
         received_headers = msg.get_all("Received", [])
-        for recv in received_headers:
-            events.append(ParsedEvent(
+        events.extend(
+            ParsedEvent(
                 timestamp=ts,
                 source_type=self.source_type,
                 actor=from_addr,
@@ -83,6 +89,8 @@ class EmailHeadersParser(BaseParser):
                 object=recv[:500],
                 detail=recv[:2000],
                 raw_line=recv[:5000],
-            ))
+            )
+            for recv in received_headers
+        )
 
         return events

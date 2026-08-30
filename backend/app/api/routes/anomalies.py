@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, require_case_access, require_role
+from app.api.deps import require_case_access, require_role
 from app.core.audit import log_audit_event
 from app.db.models.base_models import Anomaly, CorrelationEdge, Entity, User, UserRole
 from app.db.session import get_db

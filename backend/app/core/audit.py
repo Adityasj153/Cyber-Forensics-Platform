@@ -1,5 +1,6 @@
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.models.base_models import AuditLog
 
 logger = structlog.get_logger()

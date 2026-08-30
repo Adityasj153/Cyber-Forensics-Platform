@@ -1,12 +1,10 @@
-import structlog
 import numpy as np
-from datetime import datetime, timezone
-from uuid import uuid4
+import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models.base_models import LogEvent, Anomaly
 from app.ai_engine.explainability.shap_explainer import explain_anomaly
+from app.db.models.base_models import Anomaly, LogEvent
 
 logger = structlog.get_logger()
 
@@ -21,7 +19,11 @@ async def detect_anomalies(case_id: str, db: AsyncSession) -> list[dict]:
     events = result.scalars().all()
 
     if len(events) < 5:
-        logger.info("insufficient_events_for_anomaly_detection", case_id=case_id, count=len(events))
+        logger.info(
+            "insufficient_events_for_anomaly_detection",
+            case_id=case_id,
+            count=len(events),
+        )
         return []
 
     features, event_ids, feature_names = _extract_features(events)
@@ -129,15 +131,17 @@ def _extract_features(events: list) -> tuple[np.ndarray, list, list[str]]:
         has_hash = 1.0 if event.file_hash else 0.0
         same_hour_count = hourly_counts.get(hour, 0) / max(len(events), 1)
 
-        features.append([
-            hour / 23.0,
-            is_weekend,
-            action_score,
-            has_ip,
-            has_hash,
-            same_hour_count,
-            0.0,
-        ])
+        features.append(
+            [
+                hour / 23.0,
+                is_weekend,
+                action_score,
+                has_ip,
+                has_hash,
+                same_hour_count,
+                0.0,
+            ]
+        )
         event_ids.append(event.id)
 
     return np.array(features), event_ids, feature_names
@@ -145,7 +149,8 @@ def _extract_features(events: list) -> tuple[np.ndarray, list, list[str]]:
 
 def _run_isolation_forest(features: np.ndarray) -> np.ndarray:
     try:
-        from sklearn.ensemble import IsolationForest
+        from sklearn.ensemble import IsolationForest  # noqa: PLC0415
+
         model = IsolationForest(
             n_estimators=100,
             contamination=0.15,

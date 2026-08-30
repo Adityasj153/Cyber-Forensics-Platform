@@ -4,7 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.audit import log_audit_event
-from app.core.security import create_access_token, create_user, get_user_by_username, verify_password
+from app.core.security import (
+    create_access_token,
+    create_user,
+    get_user_by_username,
+    verify_password,
+)
 from app.db.models.base_models import User, UserRole
 from app.db.session import get_db
 

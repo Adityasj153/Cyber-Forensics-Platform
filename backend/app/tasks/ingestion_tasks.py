@@ -3,17 +3,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.security import verify_password, get_user_by_username
+from app.db.models.base_models import ArtifactStatus, LogEvent, RawArtifact
 from app.db.session import async_session_factory
-from app.db.models.base_models import RawArtifact, ArtifactStatus, LogEvent
-import app.ingestion.registry as registry
-from app.ingestion.parsers.windows_evtx import WindowsEVTXParser
-from app.ingestion.parsers.linux_syslog import LinuxSyslogParser
+from app.ingestion import registry
+from app.ingestion.normalizer import normalize_events
 from app.ingestion.parsers.android_logcat import AndroidLogcatParser
 from app.ingestion.parsers.android_usb_bt import AndroidUSBBTParser
 from app.ingestion.parsers.email_headers import EmailHeadersParser
+from app.ingestion.parsers.linux_syslog import LinuxSyslogParser
 from app.ingestion.parsers.network_generic import NetworkGenericParser
-from app.ingestion.normalizer import normalize_events
+from app.ingestion.parsers.windows_evtx import WindowsEVTXParser
 from app.storage.object_store import download_raw_artifact, verify_artifact_integrity
 from app.storage.search_index import index_log_events_bulk
 from app.tasks.celery_app import celery_app
@@ -60,12 +59,11 @@ async def persist_log_events(db: AsyncSession, normalized: list[dict]) -> int:
 @celery_app.task(name="tasks.parse_log_file", bind=True, max_retries=3)
 def parse_log_file(self, artifact_id: str, case_id: str, device_id: str | None = None):
     """Async task: download artifact, detect format, parse, normalize, index."""
+
     async def _run():
         async with async_session_factory() as db:
             try:
-                result = await db.execute(
-                    select(RawArtifact).where(RawArtifact.id == artifact_id)
-                )
+                result = await db.execute(select(RawArtifact).where(RawArtifact.id == artifact_id))
                 artifact = result.scalar_one_or_none()
                 if not artifact:
                     logger.error("artifact_not_found", artifact_id=artifact_id)
@@ -133,6 +131,7 @@ def parse_log_file(self, artifact_id: str, case_id: str, device_id: str | None =
 
                 # Enqueue AI correlation after successful parse
                 from app.tasks.ai_tasks import run_ai_correlation
+
                 run_ai_correlation.delay(case_id)
 
             except ValueError as e:
@@ -157,7 +156,9 @@ def parse_log_file(self, artifact_id: str, case_id: str, device_id: str | None =
                     artifact = result.scalar_one_or_none()
                     if artifact:
                         artifact.status = ArtifactStatus.PARSE_FAILED
-                        artifact.status_reason = f"Unexpected error: {type(e).__name__}: {str(e)[:500]}"
+                        artifact.status_reason = (
+                            f"Unexpected error: {type(e).__name__}: {str(e)[:500]}"
+                        )
                         await err_db.commit()
                 logger.error(
                     "parse_failed_unexpected",
@@ -168,4 +169,5 @@ def parse_log_file(self, artifact_id: str, case_id: str, device_id: str | None =
                 raise self.retry(exc=e)
 
     from app.tasks.runner import run_async
+
     run_async(_run)

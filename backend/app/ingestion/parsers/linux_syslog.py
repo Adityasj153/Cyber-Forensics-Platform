@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
 import re
+from datetime import datetime, timezone
 
 from app.ingestion.parsers.base import BaseParser, ParsedEvent
 
@@ -67,14 +67,16 @@ class LinuxSyslogParser(BaseParser):
             if pid:
                 actor = f"{process}[{pid}]"
 
-            events.append(ParsedEvent(
-                timestamp=ts,
-                source_type=self.source_type,
-                actor=actor,
-                action=action,
-                object=hostname,
-                detail=message[:2000],
-                raw_line=line[:5000],
-            ))
+            events.append(
+                ParsedEvent(
+                    timestamp=ts,
+                    source_type=self.source_type,
+                    actor=actor,
+                    action=action,
+                    object=hostname,
+                    detail=message[:2000],
+                    raw_line=line[:5000],
+                )
+            )
 
         return events

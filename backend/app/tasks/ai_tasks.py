@@ -1,7 +1,5 @@
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
 from app.db.session import async_session_factory
 from app.tasks.celery_app import celery_app
 
@@ -15,9 +13,9 @@ async def run_ai_pipeline(case_id: str):
     delete-and-rebuild) has a direct regression test: running this twice for
     the same case must not accumulate duplicate Entity/Edge/Anomaly rows.
     """
-    from app.ai_engine.correlation.cross_device import run_cross_device_correlation
     from app.ai_engine.anomaly.isolation_forest import detect_anomalies
     from app.ai_engine.anomaly.ransomware_timeline import detect_ransomware_timeline
+    from app.ai_engine.correlation.cross_device import run_cross_device_correlation
 
     logger = structlog.get_logger()
     logger.info("ai_pipeline_started", case_id=case_id)
@@ -29,8 +27,13 @@ async def run_ai_pipeline(case_id: str):
             # transaction ensures concurrent runs for the same case do not
             # race on the idempotent rebuild below.
             from sqlalchemy import delete, text
-            from app.db.models.base_models import Entity, CorrelationEdge, Anomaly
-            await db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": f"ai:{case_id}"})
+
+            from app.db.models.base_models import Anomaly, CorrelationEdge, Entity
+
+            await db.execute(
+                text("SELECT pg_advisory_xact_lock(hashtext(:k))"),
+                {"k": f"ai:{case_id}"},
+            )
 
             # Reset prior AI outputs for this case (idempotent rebuild). The
             # pipeline recomputes everything from current LogEvents, so
@@ -89,8 +92,10 @@ async def run_ai_pipeline(case_id: str):
 @celery_app.task(name="tasks.run_ai_correlation", bind=True, max_retries=2)
 def run_ai_correlation(self, case_id: str):
     """Async task: run full AI pipeline — entity graph, correlation, anomaly detection."""
+
     async def _run():
         await run_ai_pipeline(case_id)
 
     from app.tasks.runner import run_async
+
     run_async(_run)

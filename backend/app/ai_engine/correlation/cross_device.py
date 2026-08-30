@@ -1,11 +1,9 @@
 import structlog
-from uuid import uuid4
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models.base_models import LogEvent, CorrelationEdge, Entity
 from app.ai_engine.correlation.entity_graph import build_entity_graph, persist_entities
 from app.ai_engine.explainability.shap_explainer import explain_correlation
+from app.db.models.base_models import CorrelationEdge
 
 logger = structlog.get_logger()
 

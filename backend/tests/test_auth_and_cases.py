@@ -14,22 +14,28 @@ async def client():
 @pytest.mark.asyncio
 async def test_register_and_login(client):
     # Register
-    reg_resp = await client.post("/api/auth/register", json={
-        "username": "testuser",
-        "email": "test@example.com",
-        "password": "testpass123",
-        "role": "investigator",
-    })
+    reg_resp = await client.post(
+        "/api/auth/register",
+        json={
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "testpass123",
+            "role": "investigator",
+        },
+    )
     assert reg_resp.status_code == 201
     user = reg_resp.json()
     assert user["username"] == "testuser"
     assert user["role"] == "investigator"
 
     # Login
-    login_resp = await client.post("/api/auth/login", json={
-        "username": "testuser",
-        "password": "testpass123",
-    })
+    login_resp = await client.post(
+        "/api/auth/login",
+        json={
+            "username": "testuser",
+            "password": "testpass123",
+        },
+    )
     assert login_resp.status_code == 200
     token_data = login_resp.json()
     assert "access_token" in token_data
@@ -44,24 +50,34 @@ async def test_register_and_login(client):
 @pytest.mark.asyncio
 async def test_create_case(client):
     # Register and login
-    await client.post("/api/auth/register", json={
-        "username": "casecreator",
-        "email": "creator@example.com",
-        "password": "pass123",
-        "role": "investigator",
-    })
-    login_resp = await client.post("/api/auth/login", json={
-        "username": "casecreator",
-        "password": "pass123",
-    })
+    await client.post(
+        "/api/auth/register",
+        json={
+            "username": "casecreator",
+            "email": "creator@example.com",
+            "password": "pass123",
+            "role": "investigator",
+        },
+    )
+    login_resp = await client.post(
+        "/api/auth/login",
+        json={
+            "username": "casecreator",
+            "password": "pass123",
+        },
+    )
     token = login_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # Create case
-    case_resp = await client.post("/api/cases", json={
-        "name": "Test Investigation",
-        "description": "Testing case creation",
-    }, headers=headers)
+    case_resp = await client.post(
+        "/api/cases",
+        json={
+            "name": "Test Investigation",
+            "description": "Testing case creation",
+        },
+        headers=headers,
+    )
     assert case_resp.status_code == 201
     case = case_resp.json()
     assert case["name"] == "Test Investigation"

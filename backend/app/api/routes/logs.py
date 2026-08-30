@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, require_case_access, require_role
+from app.api.deps import require_case_access, require_role
 from app.core.audit import log_audit_event
 from app.db.models.base_models import (
     ArtifactStatus,
@@ -51,7 +51,11 @@ class ArtifactResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-@router.post("/{case_id}/devices", response_model=DeviceResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{case_id}/devices",
+    response_model=DeviceResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_device(
     case_id: str,
     body: DeviceCreateRequest,
@@ -113,7 +117,11 @@ async def list_devices(
     ]
 
 
-@router.post("/{case_id}/logs", response_model=ArtifactResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{case_id}/logs",
+    response_model=ArtifactResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def upload_log(
     case_id: str,
     file: UploadFile = File(...),
@@ -136,7 +144,10 @@ async def upload_log(
     # Read file content
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail=f"File too large. Max size: {MAX_FILE_SIZE // (1024*1024)}MB")
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Max size: {MAX_FILE_SIZE // (1024 * 1024)}MB",
+        )
     if len(content) == 0:
         raise HTTPException(status_code=400, detail="Empty file")
 
@@ -191,7 +202,9 @@ async def list_artifacts(
     current_user: User = Depends(require_case_access),
 ):
     result = await db.execute(
-        select(RawArtifact).where(RawArtifact.case_id == case_id).order_by(RawArtifact.uploaded_at.desc())
+        select(RawArtifact)
+        .where(RawArtifact.case_id == case_id)
+        .order_by(RawArtifact.uploaded_at.desc())
     )
     artifacts = result.scalars().all()
     return [

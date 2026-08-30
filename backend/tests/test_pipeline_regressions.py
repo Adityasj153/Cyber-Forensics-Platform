@@ -22,6 +22,7 @@ test in its own event loop. The global SQLAlchemy engine is loop-bound, so
 each test disposes the engine when finished to force a fresh pool in the next
 test's loop, avoiding "Future attached to a different loop".
 """
+
 import asyncio
 import json
 import uuid
@@ -31,25 +32,25 @@ import pytest
 from sqlalchemy import delete, func, select
 
 import app.main
-import app.tasks.ingestion_tasks
 import app.tasks.ai_tasks
-from app.tasks.celery_app import celery_app
-from app.tasks.runner import run_async
-from app.tasks.ingestion_tasks import persist_log_events
-from app.tasks.ai_tasks import run_ai_pipeline
-from app.db.session import async_session_factory, engine
+import app.tasks.ingestion_tasks
 from app.db.models.base_models import (
+    Anomaly,
+    ArtifactStatus,
+    Case,
+    CorrelationEdge,
+    Device,
+    Entity,
+    LogEvent,
+    RawArtifact,
     User,
     UserRole,
-    Case,
-    Device,
-    RawArtifact,
-    ArtifactStatus,
-    LogEvent,
-    Entity,
-    CorrelationEdge,
-    Anomaly,
 )
+from app.db.session import async_session_factory, engine
+from app.tasks.ai_tasks import run_ai_pipeline
+from app.tasks.celery_app import celery_app
+from app.tasks.ingestion_tasks import persist_log_events
+from app.tasks.runner import run_async
 
 pytestmark = pytest.mark.asyncio
 
@@ -202,9 +203,7 @@ async def test_persist_log_events_writes_logevent_rows():
             await db.commit()
 
             result = await db.execute(
-                select(LogEvent)
-                .where(LogEvent.case_id == case_id)
-                .order_by(LogEvent.timestamp)
+                select(LogEvent).where(LogEvent.case_id == case_id).order_by(LogEvent.timestamp)
             )
             rows = result.scalars().all()
 
@@ -227,13 +226,49 @@ async def test_ai_pipeline_is_idempotent_across_re_runs():
 
     events = [
         # device 1 (PC)
-        ("usb_transfer", "Q3_financials.xlsx", None, ids["dev1"], "2026-08-20 09:14:00"),
-        ("email_sent", "Q3_financials.xlsx", "203.0.113.42", ids["dev1"], "2026-08-20 09:30:00"),
-        ("network_connection", "edge-router", "203.0.113.42", ids["dev1"], "2026-08-20 09:45:00"),
+        (
+            "usb_transfer",
+            "Q3_financials.xlsx",
+            None,
+            ids["dev1"],
+            "2026-08-20 09:14:00",
+        ),
+        (
+            "email_sent",
+            "Q3_financials.xlsx",
+            "203.0.113.42",
+            ids["dev1"],
+            "2026-08-20 09:30:00",
+        ),
+        (
+            "network_connection",
+            "edge-router",
+            "203.0.113.42",
+            ids["dev1"],
+            "2026-08-20 09:45:00",
+        ),
         # device 2 (mobile)
-        ("file_received", "Q3_financials.xlsx", None, ids["dev2"], "2026-08-20 09:17:00"),
-        ("bluetooth_transfer", "Q3_financials.xlsx", None, ids["dev2"], "2026-08-20 09:22:00"),
-        ("email_sent", "Q3_financials.xlsx", "203.0.113.42", ids["dev2"], "2026-08-20 09:40:00"),
+        (
+            "file_received",
+            "Q3_financials.xlsx",
+            None,
+            ids["dev2"],
+            "2026-08-20 09:17:00",
+        ),
+        (
+            "bluetooth_transfer",
+            "Q3_financials.xlsx",
+            None,
+            ids["dev2"],
+            "2026-08-20 09:22:00",
+        ),
+        (
+            "email_sent",
+            "Q3_financials.xlsx",
+            "203.0.113.42",
+            ids["dev2"],
+            "2026-08-20 09:40:00",
+        ),
     ]
 
     try:
@@ -376,9 +411,7 @@ async def test_persist_log_events_accepts_truncated_hash():
             assert written == 1
             await db.commit()
 
-            result = await db.execute(
-                select(LogEvent).where(LogEvent.case_id == ids["case_id"])
-            )
+            result = await db.execute(select(LogEvent).where(LogEvent.case_id == ids["case_id"]))
             rows = result.scalars().all()
 
         assert len(rows) == 1
@@ -386,4 +419,3 @@ async def test_persist_log_events_accepts_truncated_hash():
     finally:
         await _cleanup(ids)
         await engine.dispose()
-

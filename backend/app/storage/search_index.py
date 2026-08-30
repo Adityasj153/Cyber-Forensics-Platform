@@ -81,12 +81,14 @@ def search_log_events(
     filter_clauses = []
 
     if query:
-        must.append({
-            "multi_match": {
-                "query": query,
-                "fields": ["actor^2", "action^2", "object^2", "detail"],
+        must.append(
+            {
+                "multi_match": {
+                    "query": query,
+                    "fields": ["actor^2", "action^2", "object^2", "detail"],
+                }
             }
-        })
+        )
     if source_type:
         filter_clauses.append({"term": {"source_type": source_type}})
     if action:

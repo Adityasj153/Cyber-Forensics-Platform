@@ -10,9 +10,8 @@ def normalize_events(
     artifact_id: str,
     events: list[ParsedEvent],
 ) -> list[dict]:
-    normalized = []
-    for event in events:
-        normalized.append({
+    return [
+        {
             "id": str(uuid4()),
             "case_id": case_id,
             "device_id": device_id,
@@ -26,5 +25,6 @@ def normalize_events(
             "file_hash": event.file_hash,
             "detail": event.detail,
             "raw_line": event.raw_line,
-        })
-    return normalized
+        }
+        for event in events
+    ]

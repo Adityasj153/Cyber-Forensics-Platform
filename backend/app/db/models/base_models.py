@@ -2,8 +2,8 @@ import enum
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
+from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -45,7 +45,11 @@ class User(Base):
     username = Column(String(255), unique=True, nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(Enum(UserRole, values_callable=lambda x: [e.value for e in x]), nullable=False, default=UserRole.VIEWER)
+    role = Column(
+        Enum(UserRole, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=UserRole.VIEWER,
+    )
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     cases = relationship("Case", secondary="case_investigators", back_populates="investigators")
@@ -57,7 +61,11 @@ class Case(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
     name = Column(String(500), nullable=False)
     description = Column(Text, nullable=True)
-    status = Column(Enum(CaseStatus, values_callable=lambda x: [e.value for e in x]), nullable=False, default=CaseStatus.OPEN)
+    status = Column(
+        Enum(CaseStatus, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=CaseStatus.OPEN,
+    )
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
@@ -71,8 +79,12 @@ class Case(Base):
 class CaseInvestigator(Base):
     __tablename__ = "case_investigators"
 
-    case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), primary_key=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    case_id = Column(
+        UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
     assigned_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 
@@ -96,11 +108,17 @@ class RawArtifact(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
     case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
-    device_id = Column(UUID(as_uuid=True), ForeignKey("devices.id", ondelete="SET NULL"), nullable=True)
+    device_id = Column(
+        UUID(as_uuid=True), ForeignKey("devices.id", ondelete="SET NULL"), nullable=True
+    )
     filename = Column(String(500), nullable=False)
     sha256 = Column(String(64), nullable=False, index=True)
     storage_path = Column(String(1000), nullable=False)
-    status = Column(Enum(ArtifactStatus, values_callable=lambda x: [e.value for e in x]), nullable=False, default=ArtifactStatus.QUEUED)
+    status = Column(
+        Enum(ArtifactStatus, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=ArtifactStatus.QUEUED,
+    )
     status_reason = Column(Text, nullable=True)
     uploaded_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     uploaded_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
@@ -113,11 +131,27 @@ class LogEvent(Base):
     __tablename__ = "log_events"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
-    case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True)
-    device_id = Column(UUID(as_uuid=True), ForeignKey("devices.id", ondelete="SET NULL"), nullable=True, index=True)
-    artifact_id = Column(UUID(as_uuid=True), ForeignKey("raw_artifacts.id", ondelete="SET NULL"), nullable=True)
+    case_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    device_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("devices.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    artifact_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("raw_artifacts.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
-    source_type = Column(String(100), nullable=False)  # windows_evtx, linux_syslog, android_logcat, etc.
+    source_type = Column(
+        String(100), nullable=False
+    )  # windows_evtx, linux_syslog, android_logcat, etc.
     actor = Column(String(500), nullable=True)
     action = Column(String(255), nullable=False)
     object = Column(String(1000), nullable=True)
@@ -149,25 +183,53 @@ class Entity(Base):
     __tablename__ = "entities"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
-    case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True)
+    case_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     entity_type = Column(String(50), nullable=False)  # user, device, file, ip, hash
     value = Column(String(1000), nullable=False)
     entity_metadata = Column("metadata", JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     case = relationship("Case")
-    outgoing_edges = relationship("CorrelationEdge", foreign_keys="CorrelationEdge.entity_a_id", back_populates="entity_a")
-    incoming_edges = relationship("CorrelationEdge", foreign_keys="CorrelationEdge.entity_b_id", back_populates="entity_b")
+    outgoing_edges = relationship(
+        "CorrelationEdge",
+        foreign_keys="CorrelationEdge.entity_a_id",
+        back_populates="entity_a",
+    )
+    incoming_edges = relationship(
+        "CorrelationEdge",
+        foreign_keys="CorrelationEdge.entity_b_id",
+        back_populates="entity_b",
+    )
 
 
 class CorrelationEdge(Base):
     __tablename__ = "correlation_edges"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
-    case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True)
-    entity_a_id = Column(UUID(as_uuid=True), ForeignKey("entities.id", ondelete="CASCADE"), nullable=False)
-    entity_b_id = Column(UUID(as_uuid=True), ForeignKey("entities.id", ondelete="CASCADE"), nullable=False)
-    relation_type = Column(String(100), nullable=False)  # same_file, usb_transfer, bluetooth_send, email_attach, etc.
+    case_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    entity_a_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("entities.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    entity_b_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("entities.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    relation_type = Column(
+        String(100), nullable=False
+    )  # same_file, usb_transfer, bluetooth_send, email_attach, etc.
     confidence = Column(Float, nullable=False, default=0.0)
     evidence_event_ids = Column(JSON, nullable=True)  # list of LogEvent IDs that support this edge
     explanation_json = Column(JSON, nullable=True)  # SHAP/feature attribution explanation
@@ -183,16 +245,27 @@ class Anomaly(Base):
     __tablename__ = "anomalies"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
-    case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True)
+    case_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     event_ids = Column(JSON, nullable=True)  # list of LogEvent IDs involved
     score = Column(Float, nullable=False)  # anomaly score (higher = more anomalous)
     severity = Column(String(20), nullable=False, default="low")  # low, medium, high, critical
-    category = Column(String(100), nullable=False)  # off_hours, volume_spike, suspicious_process, ransomware, etc.
+    category = Column(
+        String(100), nullable=False
+    )  # off_hours, volume_spike, suspicious_process, ransomware, etc.
     model_name = Column(String(100), nullable=False)  # isolation_forest, ransomware_detector, etc.
     model_version = Column(String(100), nullable=True)
     explanation_json = Column(JSON, nullable=True)  # SHAP feature attribution
-    reviewed_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    review_status = Column(String(50), nullable=False, default="pending")  # pending, confirmed, dismissed
+    reviewed_by = Column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    review_status = Column(
+        String(50), nullable=False, default="pending"
+    )  # pending, confirmed, dismissed
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     case = relationship("Case")

@@ -1,8 +1,8 @@
 import hashlib
-import structlog
 from io import BytesIO
+
+import structlog
 from minio import Minio
-from minio.error import S3Error
 
 from app.core.config import get_settings
 
