@@ -3,8 +3,8 @@ import json
 from collections import defaultdict
 from typing import Any
 
-import anthropic
 from fastapi import APIRouter, Depends, HTTPException
+from openai import OpenAI
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -93,27 +93,24 @@ async def nl_query(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_case_access),
 ) -> NLQueryResponse:
-    if not settings.ANTHROPIC_API_KEY:
-        raise HTTPException(status_code=503, detail="NL query service not configured: ANTHROPIC_API_KEY not set")
+    if not settings.GROQ_API_KEY:
+        raise HTTPException(status_code=503, detail="NL query service not configured: GROQ_API_KEY not set")
 
-    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+    client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=settings.GROQ_API_KEY)
 
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-5",
+        response = client.chat.completions.create(
+            model="groq/compound",
             max_tokens=1024,
-            system=SYSTEM_PROMPT,
             messages=[
-                {
-                    "role": "user",
-                    "content": body.question,
-                }
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": body.question},
             ],
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"NL query service error: {exc}")
 
-    raw_text = response.content[0].text.strip()
+    raw_text = response.choices[0].message.content.strip()
 
     try:
         parsed = json.loads(raw_text)
@@ -189,22 +186,24 @@ def _format_answer_from_events(events: list[dict], filters: FilterParams) -> tup
 
 
 async def _call_llm(question: str) -> tuple[FilterParams, str]:
-    if not settings.ANTHROPIC_API_KEY:
-        raise HTTPException(status_code=503, detail="NL query service not configured: ANTHROPIC_API_KEY not set")
+    if not settings.GROQ_API_KEY:
+        raise HTTPException(status_code=503, detail="NL query service not configured: GROQ_API_KEY not set")
 
-    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+    client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=settings.GROQ_API_KEY)
 
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-5",
+        response = client.chat.completions.create(
+            model="groq/compound",
             max_tokens=1024,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": question}],
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": question},
+            ],
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"NL query service error: {exc}")
 
-    raw_text = response.content[0].text.strip()
+    raw_text = response.choices[0].message.content.strip()
 
     try:
         parsed = json.loads(raw_text)
@@ -246,6 +245,24 @@ async def nl_query_execute(
         if not result.scalar_one_or_none():
             filters.query = (filters.query or "") + " " + filters.device_id
             filters.device_id = None
+
+    has_filters = any([
+        filters.query,
+        filters.source_type,
+        filters.action,
+        filters.device_id,
+        filters.ip_address,
+        filters.timestamp_from,
+        filters.timestamp_to,
+    ])
+
+    if not has_filters:
+        return NLQueryExecuteResponse(
+            answer="No specific search filters could be extracted from your question. Try rephrasing — for example, ask about a specific action (like 'USB transfers'), a filename, an IP address, or a time range.",
+            cited_event_ids=[],
+            filters_applied=filters,
+            total_found=0,
+        )
 
     def _search() -> dict:
         return search_log_events(
