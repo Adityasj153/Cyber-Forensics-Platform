@@ -41,6 +41,7 @@ htmlcov/
 
 # Logs
 *.log
+logs.zip
 
 # Docker
 docker-compose.override.yml

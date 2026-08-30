@@ -139,8 +139,6 @@
 - [x] `next build` (production build) — ✅ PASSES (session 14): `npm run build` compiles cleanly, all 13 routes generated, only pre-existing `useMemo` warnings. Fixed two empty stub pages (`nl-query/page.tsx` placeholder, `(auth)/register/page.tsx` redirect to `/login`) that were causing TypeScript "file is not a module" build errors.
 - [x] node_modules NOT installed in frontend — FIXED 2026-08-26 (`npm install` done; package-lock.json committed). Typecheck/lint now possible locally
 - [x] 8 TS errors blocking `next build` — FIXED (5ccdee3), tsc clean
-- [x] node_modules NOT installed in frontend — FIXED 2026-08-26 (`npm install` done; package-lock.json committed). Typecheck/lint now possible locally
-- [x] 8 TS errors blocking `next build` — FIXED (5ccdee3), tsc clean
 - [x] NextAuth env vars NEXTAUTH_URL + NEXTAUTH_SECRET — set in untracked frontend/.env.local (dev value); prod deploy still needs a real secret
 - [x] **Scenario 2 E2E validation DONE** — session 13: browser 13/13 assertions PASSED, Zod validated on populated data, hash normalization confirmed (66→64 chars). Scenario 1 and Scenario 2 both honestly closed.
 - [ ] NL query backend has empty __init__.py — Claude API integration not implemented
