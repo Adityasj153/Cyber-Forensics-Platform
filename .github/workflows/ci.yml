@@ -55,7 +55,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - run: alembic upgrade head
+      - run: python -m alembic upgrade head
       - run: pytest tests/ -v --tb=short
 
   frontend-lint:
