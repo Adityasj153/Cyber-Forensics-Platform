@@ -71,13 +71,13 @@ print('DB DIAGNOSIS COMPLETE', flush=True)
       - name: Run alembic with verbose output
         run: |
           echo "=== ALEMBIC INFO ==="
-          alembic info 2>&1
+          alembic info
           echo ""
           echo "=== ALEMBIC CURRENT ==="
-          alembic current 2>&1
+          alembic current
           echo ""
           echo "=== ALEMBIC UPGRADE HEAD ==="
-          alembic upgrade head --sql 2>&1 | head -50
+          alembic upgrade head
           echo ""
           echo "=== ALEMBIC EXIT ==="
       - name: Run pytest
