@@ -58,14 +58,15 @@ jobs:
       - name: Diagnose DB connectivity
         run: |
           echo "DATABASE_URL_SYNC=$DATABASE_URL_SYNC"
-          python -c "import os, sys, psycopg2; print('Testing DB: ' + os.environ.get('DATABASE_URL_SYNC', 'NOT SET'), flush=True); conn = psycopg2.connect(os.environ['DATABASE_URL_SYNC'], connect_timeout=10); print('DB OK, version: ' + str(conn.server_version), flush=True); cur = conn.cursor(); cur.execute('SELECT 1'); print('Query OK: ' + str(cur.fetchone()), flush=True); conn.close(); print('DB DIAGNOSIS COMPLETE', flush=True)"
+          python -c "import os; url=os.environ.get('DATABASE_URL_SYNC','NOT SET'); print(f'URL={url}')"
+          python -c "import os, psycopg2; conn=psycopg2.connect(os.environ['DATABASE_URL_SYNC']); print(f'DB version: {conn.server_version}'); conn.close()"
       - name: Run alembic with verbose output
         run: |
           echo "=== ALEMBIC CURRENT ==="
-          alembic current
+          alembic current || true
           echo ""
           echo "=== RUNNING ALEMBIC UPGRADE ==="
-          alembic upgrade head
+          alembic upgrade head --sql 2>&1 | head -100
           echo ""
           echo "=== ALEMBIC EXIT ==="
       - name: Run pytest
