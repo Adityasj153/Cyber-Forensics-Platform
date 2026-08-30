@@ -5,7 +5,14 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.db.models.base_models import Base
+# Add project root to path so 'app' can be imported
+# env.py is at backend/app/db/migrations/env.py
+# backend/ is the working-directory, add it to sys.path
+backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
+from app.db.models.base_models import Base  # noqa: E402
 
 config = context.config
 
