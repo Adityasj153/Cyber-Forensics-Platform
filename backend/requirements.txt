@@ -31,6 +31,7 @@ scikit-learn==1.4.0
 networkx==3.2.1
 shap==0.44.1
 numpy==1.26.4
+anthropic==0.40.0
 
 # Logging
 structlog==24.1.0

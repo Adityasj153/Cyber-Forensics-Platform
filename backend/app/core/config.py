@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "Cyber Forensics Platform"
     DEBUG: bool = True
 
+    # Anthropic (NL query)
+    ANTHROPIC_API_KEY: str = ""
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
