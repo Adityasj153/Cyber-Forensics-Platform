@@ -94,7 +94,9 @@ async def nl_query(
     current_user: User = Depends(require_case_access),
 ) -> NLQueryResponse:
     if not settings.GROQ_API_KEY:
-        raise HTTPException(status_code=503, detail="NL query service not configured: GROQ_API_KEY not set")
+        raise HTTPException(
+            status_code=503, detail="NL query service not configured: GROQ_API_KEY not set"
+        )
 
     client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=settings.GROQ_API_KEY)
 
@@ -165,7 +167,7 @@ def _format_answer_from_events(events: list[dict], filters: FilterParams) -> tup
     objects = sorted({e.get("object") for e in events if e.get("object")})
     if objects:
         obj_samples = objects[:5]
-        more = f" (+{len(objects)-5} more)" if len(objects) > 5 else ""
+        more = f" (+{len(objects) - 5} more)" if len(objects) > 5 else ""
         lines.append(f"Objects: {', '.join(obj_samples)}{more}.")
 
     ips = sorted({e.get("ip_address") for e in events if e.get("ip_address")})
@@ -174,7 +176,9 @@ def _format_answer_from_events(events: list[dict], filters: FilterParams) -> tup
 
     files = sorted({e.get("file_hash") for e in events if e.get("file_hash")})
     if files:
-        lines.append(f"File hashes ({len(files)} total): {', '.join(files[:3])}{' ...' if len(files) > 3 else ''}.")
+        lines.append(
+            f"File hashes ({len(files)} total): {', '.join(files[:3])}{' ...' if len(files) > 3 else ''}."
+        )
 
     timestamps = [e.get("timestamp") for e in events if e.get("timestamp")]
     if timestamps:
@@ -187,7 +191,9 @@ def _format_answer_from_events(events: list[dict], filters: FilterParams) -> tup
 
 async def _call_llm(question: str) -> tuple[FilterParams, str]:
     if not settings.GROQ_API_KEY:
-        raise HTTPException(status_code=503, detail="NL query service not configured: GROQ_API_KEY not set")
+        raise HTTPException(
+            status_code=503, detail="NL query service not configured: GROQ_API_KEY not set"
+        )
 
     client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=settings.GROQ_API_KEY)
 
@@ -241,20 +247,24 @@ async def nl_query_execute(
     filters, _ = await _call_llm(body.question)
 
     if filters.device_id:
-        result = await db.execute(select(Device).where(Device.id == filters.device_id, Device.case_id == case_id))
+        result = await db.execute(
+            select(Device).where(Device.id == filters.device_id, Device.case_id == case_id)
+        )
         if not result.scalar_one_or_none():
             filters.query = (filters.query or "") + " " + filters.device_id
             filters.device_id = None
 
-    has_filters = any([
-        filters.query,
-        filters.source_type,
-        filters.action,
-        filters.device_id,
-        filters.ip_address,
-        filters.timestamp_from,
-        filters.timestamp_to,
-    ])
+    has_filters = any(
+        [
+            filters.query,
+            filters.source_type,
+            filters.action,
+            filters.device_id,
+            filters.ip_address,
+            filters.timestamp_from,
+            filters.timestamp_to,
+        ]
+    )
 
     if not has_filters:
         return NLQueryExecuteResponse(

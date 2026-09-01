@@ -194,56 +194,63 @@ def _build_text_report(data: dict[str, Any]) -> str:
     for action, count in sorted(action_counts.items(), key=lambda x: -x[1])[:10]:
         lines.append(f"  {action}: {count}")
 
-    lines.extend([
-        "",
-        "=" * 60,
-        f"DEVICES ({len(data['devices'])})",
-        "=" * 60,
-    ])
+    lines.extend(
+        [
+            "",
+            "=" * 60,
+            f"DEVICES ({len(data['devices'])})",
+            "=" * 60,
+        ]
+    )
     lines.extend(
         f"  - {d['name'] or d['id']} ({d['device_type']}, OS: {d['os'] or 'N/A'}, Owner: {d['owner'] or 'N/A'})"
         for d in data["devices"]
     )
 
-    lines.extend([
-        "",
-        "=" * 60,
-        f"ENTITIES ({len(data['entities'])})",
-        "=" * 60,
-    ])
     lines.extend(
-        f"  [{e['entity_type']}] {e['value']}"
-        for e in data["entities"]
+        [
+            "",
+            "=" * 60,
+            f"ENTITIES ({len(data['entities'])})",
+            "=" * 60,
+        ]
     )
+    lines.extend(f"  [{e['entity_type']}] {e['value']}" for e in data["entities"])
 
-    lines.extend([
-        "",
-        "=" * 60,
-        f"ANOMALIES ({len(data['anomalies'])})",
-        "=" * 60,
-    ])
+    lines.extend(
+        [
+            "",
+            "=" * 60,
+            f"ANOMALIES ({len(data['anomalies'])})",
+            "=" * 60,
+        ]
+    )
     lines.extend(
         f"  [{a['severity'].upper()}] {a['category']} (score={a['score']:.3f}, status={a['review_status']})"
         for a in data["anomalies"]
     )
 
-    lines.extend([
-        "",
-        "=" * 60,
-        f"CORRELATIONS ({len(data['correlations'])})",
-        "=" * 60,
-    ])
+    lines.extend(
+        [
+            "",
+            "=" * 60,
+            f"CORRELATIONS ({len(data['correlations'])})",
+            "=" * 60,
+        ]
+    )
     lines.extend(
         f"  {c['relation_type']}: {c['entity_a_id'][:8]}... -> {c['entity_b_id'][:8]}... (conf={c['confidence']:.2f})"
         for c in data["correlations"]
     )
 
-    lines.extend([
-        "",
-        "=" * 60,
-        "EVENT DETAIL (first 100)",
-        "=" * 60,
-    ])
+    lines.extend(
+        [
+            "",
+            "=" * 60,
+            "EVENT DETAIL (first 100)",
+            "=" * 60,
+        ]
+    )
     lines.extend(
         f"[{e['timestamp']}] {e['action']} | actor={e['actor'] or '?'} | object={e['object'] or '?'} | ip={e['ip_address'] or '?'} | detail={str(e['detail'] or '')[:80]}"
         for e in data["events"][:100]
@@ -255,22 +262,33 @@ def _build_text_report(data: dict[str, Any]) -> str:
 def _build_csv(data: dict[str, Any]) -> str:
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-        "timestamp", "source_type", "action", "actor", "object",
-        "ip_address", "file_hash", "device_id", "detail",
-    ])
+    writer.writerow(
+        [
+            "timestamp",
+            "source_type",
+            "action",
+            "actor",
+            "object",
+            "ip_address",
+            "file_hash",
+            "device_id",
+            "detail",
+        ]
+    )
     for e in data["events"]:
-        writer.writerow([
-            e["timestamp"] or "",
-            e["source_type"] or "",
-            e["action"] or "",
-            e["actor"] or "",
-            e["object"] or "",
-            e["ip_address"] or "",
-            e["file_hash"] or "",
-            e["device_id"] or "",
-            (e["detail"] or "")[:200],
-        ])
+        writer.writerow(
+            [
+                e["timestamp"] or "",
+                e["source_type"] or "",
+                e["action"] or "",
+                e["actor"] or "",
+                e["object"] or "",
+                e["ip_address"] or "",
+                e["file_hash"] or "",
+                e["device_id"] or "",
+                (e["detail"] or "")[:200],
+            ]
+        )
     return output.getvalue()
 
 
@@ -280,7 +298,9 @@ def _build_pdf(data: dict[str, Any]) -> bytes:
     doc = SimpleDocTemplate(buf, pagesize=letter, topMargin=0.75 * inch, bottomMargin=0.75 * inch)
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle("Title", parent=styles["Heading1"], fontSize=16, spaceAfter=12)
-    heading_style = ParagraphStyle("Heading", parent=styles["Heading2"], fontSize=12, spaceAfter=6, spaceBefore=12)
+    heading_style = ParagraphStyle(
+        "Heading", parent=styles["Heading2"], fontSize=12, spaceAfter=6, spaceBefore=12
+    )
     body_style = ParagraphStyle("Body", parent=styles["Normal"], fontSize=9, spaceAfter=4)
 
     story = []
@@ -301,15 +321,24 @@ def _build_pdf(data: dict[str, Any]) -> bytes:
     top_actions = sorted(action_counts.items(), key=lambda x: -x[1])[:10]
     action_data = [["Action", "Count"]] + [[a, str(c)] for a, c in top_actions]
     action_table = Table(action_data, colWidths=[3 * inch, 1.5 * inch])
-    action_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#475569")),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#1e293b"), colors.HexColor("#0f172a")]),
-        ("PADDING", (0, 0), (-1, -1), 4),
-    ]))
+    action_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#475569")),
+                (
+                    "ROWBACKGROUNDS",
+                    (0, 1),
+                    (-1, -1),
+                    [colors.HexColor("#1e293b"), colors.HexColor("#0f172a")],
+                ),
+                ("PADDING", (0, 0), (-1, -1), 4),
+            ]
+        )
+    )
     story.append(action_table)
     story.append(Spacer(1, 0.15 * inch))
 
@@ -320,15 +349,24 @@ def _build_pdf(data: dict[str, Any]) -> bytes:
             for d in data["devices"]
         ]
         dev_table = Table(dev_data, colWidths=[2 * inch, 1.2 * inch, 1.2 * inch, 1.2 * inch])
-        dev_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#475569")),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#1e293b"), colors.HexColor("#0f172a")]),
-            ("PADDING", (0, 0), (-1, -1), 4),
-        ]))
+        dev_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#475569")),
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [colors.HexColor("#1e293b"), colors.HexColor("#0f172a")],
+                    ),
+                    ("PADDING", (0, 0), (-1, -1), 4),
+                ]
+            )
+        )
         story.append(dev_table)
         story.append(Spacer(1, 0.15 * inch))
 
@@ -339,33 +377,56 @@ def _build_pdf(data: dict[str, Any]) -> bytes:
             for a in data["anomalies"]
         ]
         anomaly_table = Table(anomaly_data, colWidths=[1 * inch, 2 * inch, 1 * inch, 1.5 * inch])
-        anomaly_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#475569")),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#1e293b"), colors.HexColor("#0f172a")]),
-            ("PADDING", (0, 0), (-1, -1), 4),
-        ]))
+        anomaly_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#475569")),
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [colors.HexColor("#1e293b"), colors.HexColor("#0f172a")],
+                    ),
+                    ("PADDING", (0, 0), (-1, -1), 4),
+                ]
+            )
+        )
         story.append(anomaly_table)
         story.append(Spacer(1, 0.15 * inch))
 
     story.append(Paragraph("Event Detail (sample, first 50)", heading_style))
     event_data = [["Timestamp", "Action", "Actor", "Object"]] + [
-        [e["timestamp"][:19] if e["timestamp"] else "", e["action"], e["actor"] or "", e["object"] or ""]
+        [
+            e["timestamp"][:19] if e["timestamp"] else "",
+            e["action"],
+            e["actor"] or "",
+            e["object"] or "",
+        ]
         for e in data["events"][:50]
     ]
     event_table = Table(event_data, colWidths=[1.8 * inch, 1.5 * inch, 1.5 * inch, 2 * inch])
-    event_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 7),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#475569")),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#1e293b"), colors.HexColor("#0f172a")]),
-        ("PADDING", (0, 0), (-1, -1), 3),
-    ]))
+    event_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 7),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#475569")),
+                (
+                    "ROWBACKGROUNDS",
+                    (0, 1),
+                    (-1, -1),
+                    [colors.HexColor("#1e293b"), colors.HexColor("#0f172a")],
+                ),
+                ("PADDING", (0, 0), (-1, -1), 3),
+            ]
+        )
+    )
     story.append(event_table)
 
     doc.build(story)
@@ -436,9 +497,7 @@ async def list_reports(
     current_user: User = Depends(require_case_access),
 ) -> list[ReportResponse]:
     result = await db.execute(
-        select(Report)
-        .where(Report.case_id == case_id)
-        .order_by(Report.created_at.desc())
+        select(Report).where(Report.case_id == case_id).order_by(Report.created_at.desc())
     )
     reports = result.scalars().all()
     return [
@@ -465,7 +524,9 @@ async def approve_report(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.INVESTIGATOR)),
 ) -> ReportResponse:
-    result = await db.execute(select(Report).where(Report.id == report_id, Report.case_id == case_id))
+    result = await db.execute(
+        select(Report).where(Report.id == report_id, Report.case_id == case_id)
+    )
     report = result.scalar_one_or_none()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
@@ -499,7 +560,9 @@ async def download_report(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_case_access),
 ) -> StreamingResponse:
-    result = await db.execute(select(Report).where(Report.id == report_id, Report.case_id == case_id))
+    result = await db.execute(
+        select(Report).where(Report.id == report_id, Report.case_id == case_id)
+    )
     report = result.scalar_one_or_none()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
